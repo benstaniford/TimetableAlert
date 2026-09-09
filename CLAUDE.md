@@ -14,8 +14,8 @@ See [README.md](README.md) for the timetable JSON format.
 ## Build & Test Commands
 
 ```bash
-# Build everything
-dotnet build TimetableAlert.sln -c Release
+# Build the app (NOT the .sln - see the note below)
+dotnet build TimetableAlert.csproj -c Release
 
 # Run tests (xUnit)
 dotnet test TimetableAlert.Tests/TimetableAlert.Tests.csproj
@@ -28,6 +28,11 @@ dotnet publish TimetableAlert.csproj -c Release -o bin/Release/net10.0-windows/p
 ```
 
 These need the .NET 10 SDK on **Windows** — the WPF project targets `net10.0-windows`.
+
+**Do not `dotnet build TimetableAlert.sln`.** The solution includes the WiX v3 `.wixproj`, which
+the `dotnet` CLI cannot load — it fails with "The WiX Toolset v3.11 (or newer) build tools must
+be installed". Build `TimetableAlert.csproj` (which pulls in Core via `ProjectReference`) and let
+full MSBuild build the installer. The solution is for Visual Studio, which handles both.
 
 ## Architecture
 

@@ -74,10 +74,10 @@ jobs:
           Get-Content $wxsPath | Select-String "define ProductVersion"
 
       - name: Restore dependencies
-        run: dotnet restore TimetableAlert.sln
+        run: dotnet restore TimetableAlert.csproj
 
       - name: Build application
-        run: dotnet build TimetableAlert.sln -c Release --no-restore -p:Version=${{ steps.version.outputs.NUMERIC_VERSION }}
+        run: dotnet build TimetableAlert.csproj -c Release --no-restore -p:Version=${{ steps.version.outputs.NUMERIC_VERSION }}
 
       - name: Run tests
         run: dotnet test TimetableAlert.Tests/TimetableAlert.Tests.csproj -c Release --logger "console;verbosity=normal"

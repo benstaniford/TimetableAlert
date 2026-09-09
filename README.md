@@ -65,9 +65,14 @@ and is a good starting point to edit.
 Requires the .NET 10 SDK on Windows.
 
 ```bash
-dotnet build TimetableAlert.sln -c Release
+dotnet build TimetableAlert.csproj -c Release
 dotnet test TimetableAlert.Tests/TimetableAlert.Tests.csproj
 ```
+
+Build the app project, not the solution: the solution also contains the WiX v3 installer
+project, which the `dotnet` CLI cannot load. The MSI is built separately with full MSBuild
+(`msbuild TimetableAlert.Installer/TimetableAlert.Installer.wixproj /p:Configuration=Release
+/p:Platform=x64`), which is what the release workflow does.
 
 Releases are cut by `./scripts/make-release`, which tags the next patch version and pushes it;
 GitHub Actions then builds the WiX MSI and attaches it to a GitHub Release.
