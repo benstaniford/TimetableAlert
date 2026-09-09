@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using TimetableAlert.Core;
+using TimetableAlert.Core.Diagnostics;
 using TimetableAlert.Core.Models;
 
 namespace TimetableAlert.Services;
@@ -22,14 +24,25 @@ internal static class TimetableCache
         {
             if (!File.Exists(CachePath))
             {
+                Log.Debug($"Cache: nothing at {CachePath} yet");
                 return null;
             }
 
             var result = TimetableLoader.LoadFile(CachePath);
-            return result.Success ? result.Timetable : null;
+            if (!result.Success)
+            {
+                Log.Warn($"Cache: {CachePath} could not be validated: {result.ErrorSummary.Replace(Environment.NewLine, "; ", StringComparison.Ordinal)}");
+                return null;
+            }
+
+            Log.Info(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Cache: read {result.Timetable!.Lessons.Count} lessons downloaded {result.Timetable.FetchedAt?.LocalDateTime:yyyy-MM-dd HH:mm}"));
+            return result.Timetable;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
         {
+            Log.Error($"Cache: {CachePath} could not be read", ex);
             return null;
         }
     }
@@ -42,10 +55,12 @@ internal static class TimetableCache
         {
             Directory.CreateDirectory(AppSettings.SettingsFolder);
             File.WriteAllText(CachePath, TimetableWriter.ToJson(timetable));
+            Log.Info(string.Create(CultureInfo.InvariantCulture, $"Cache: wrote {timetable.Lessons.Count} lessons to {CachePath}"));
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
+            Log.Error($"Cache: {CachePath} could not be written", ex);
             return false;
         }
     }

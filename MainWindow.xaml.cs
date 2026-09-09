@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -5,6 +7,7 @@ using System.Reflection;
 using System.Windows;
 using Microsoft.Win32;
 using TimetableAlert.Core;
+using TimetableAlert.Core.Diagnostics;
 using TimetableAlert.Services;
 
 namespace TimetableAlert;
@@ -45,6 +48,7 @@ internal sealed partial class MainWindow : Window
     {
         if (!TimetableSource.IsConfigured)
         {
+            Log.Info("Startup: no calendar is set up, falling back to a timetable file");
             LoadFileAtStartup();
             return;
         }
@@ -52,9 +56,14 @@ internal sealed partial class MainWindow : Window
         var cached = TimetableCache.Load();
         if (!TimetableCache.IsStale(cached, DateTime.Now))
         {
+            Log.Info("Startup: the cached week is still fresh, using it without downloading");
             _alerts.SetTimetable(cached!);
             return;
         }
+
+        Log.Info(cached is null
+            ? "Startup: nothing cached, downloading the week"
+            : "Startup: the cached week is stale, downloading a fresh one");
 
         // Run on the stale copy while the download happens, so a slow or absent network at logon
         // does not mean no warnings at all for the first lesson of the day.
@@ -74,6 +83,7 @@ internal sealed partial class MainWindow : Window
             && !string.IsNullOrWhiteSpace(_settings.TimetablePath)
             && File.Exists(_settings.TimetablePath))
         {
+            Log.Warn($"Startup: the download gave nothing, falling back to {_settings.TimetablePath}");
             TryLoad(_settings.TimetablePath, out _);
         }
     }
@@ -87,9 +97,15 @@ internal sealed partial class MainWindow : Window
         var path = _settings.TimetablePath;
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
+            Log.Info(string.IsNullOrWhiteSpace(path)
+                ? "Startup: no timetable has ever been chosen"
+                : $"Startup: the remembered timetable {path} is no longer there");
+
             path = Path.Combine(AppContext.BaseDirectory, SampleFileName);
+            Log.Info($"Startup: trying the bundled sample at {path}");
             if (!File.Exists(path))
             {
+                Log.Warn("Startup: there is no sample either, so nothing is loaded");
                 ShowInTooltip("no timetable loaded");
                 return;
             }
@@ -105,12 +121,17 @@ internal sealed partial class MainWindow : Window
     {
         errorSummary = string.Empty;
 
+        Log.Info($"Loading timetable file {path}");
+
         try
         {
             var result = TimetableLoader.LoadFile(path);
             if (!result.Success)
             {
                 errorSummary = result.ErrorSummary;
+                Log.Warn(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Timetable file {path} was rejected by {result.Errors.Count} validation error(s): {errorSummary.Replace(Environment.NewLine, "; ", StringComparison.Ordinal)}"));
                 return false;
             }
 
@@ -122,6 +143,7 @@ internal sealed partial class MainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             errorSummary = ex.Message;
+            Log.Error($"Timetable file {path} could not be read", ex);
             return false;
         }
     }
@@ -135,6 +157,11 @@ internal sealed partial class MainWindow : Window
         }
 
         _note = outcome.Note;
+        if (_note is not null)
+        {
+            Log.Warn($"Timetable is not quite right: {_note}");
+        }
+
         ShowInTooltip(_alerts.Status);
     }
 
@@ -147,10 +174,12 @@ internal sealed partial class MainWindow : Window
     {
         if (!TimetableSource.IsConfigured)
         {
+            Log.Warn("Refresh asked for, but no calendar is set up");
             Notify("No calendar has been set up yet. Use \"Timetable source…\" first.", "Nothing to refresh", MessageBoxImage.Information);
             return;
         }
 
+        Log.Info("Refresh from the calendar asked for from the tray menu");
         var outcome = await TimetableSource.RefreshAsync(_settings, force: true);
         Apply(outcome);
 
@@ -177,8 +206,11 @@ internal sealed partial class MainWindow : Window
         var dialog = new TimetableSourceWindow(_settings) { Owner = this };
         if (dialog.ShowDialog() != true)
         {
+            Log.Info("Timetable source: the dialog was cancelled");
             return;
         }
+
+        Log.Info("Timetable source: saved, refreshing with it");
 
         _settings.Save();
         RefreshFromCalendar_Click(sender, e);
@@ -196,6 +228,7 @@ internal sealed partial class MainWindow : Window
 
         if (dialog.ShowDialog(this) != true)
         {
+            Log.Debug("Load timetable: the file dialog was cancelled");
             return;
         }
 
@@ -242,6 +275,28 @@ internal sealed partial class MainWindow : Window
 
     private void TestOverlay_Click(object sender, RoutedEventArgs e) => _alerts.ShowTestBanner();
 
+    /// <summary>
+    /// Opens the log in Notepad. Writing a line first means there is always a file to open, even
+    /// on a machine where nothing has happened yet.
+    /// </summary>
+    private void ViewLogs_Click(object sender, RoutedEventArgs e)
+    {
+        var path = Log.EnsureFile();
+
+        try
+        {
+            using var notepad = Process.Start(new ProcessStartInfo("notepad.exe", path) { UseShellExecute = false });
+            Log.Debug(notepad is null
+                ? "Notepad was already showing the log"
+                : string.Create(CultureInfo.InvariantCulture, $"Notepad opened the log as pid {notepad.Id}"));
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ObjectDisposedException)
+        {
+            Log.Error($"Notepad would not open {path}", ex);
+            Notify($"The log could not be opened in Notepad:\n\n{ex.Message}\n\nIt is at:\n{path}", "Log not opened", MessageBoxImage.Warning);
+        }
+    }
+
     private void About_Click(object sender, RoutedEventArgs e)
     {
         var version = Assembly.GetExecutingAssembly()
@@ -257,6 +312,7 @@ internal sealed partial class MainWindow : Window
 
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
+        Log.Info("Exit chosen from the tray menu");
         _alerts.Dispose();
         Application.Current.Shutdown();
     }

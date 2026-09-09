@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net.Http;
+using TimetableAlert.Core.Diagnostics;
 using TimetableAlert.Core.Feed;
 using TimetableAlert.Core.Models;
 
@@ -33,7 +35,12 @@ internal static class TimetableSource
     internal static bool SaveFeedUrl(Uri feedUrl)
     {
         ArgumentNullException.ThrowIfNull(feedUrl);
-        return CredentialStore.Write(CredentialStore.FeedTarget, userName: null, feedUrl.ToString());
+
+        var stored = CredentialStore.Write(CredentialStore.FeedTarget, userName: null, feedUrl.ToString());
+        Log.Info(stored
+            ? $"Feed address saved to Credential Manager: {Log.Redact(feedUrl)}"
+            : $"Credential Manager refused the feed address {Log.Redact(feedUrl)}");
+        return stored;
     }
 
     /// <summary>Stores the parent login, or forgets it when either half is blank.</summary>
@@ -41,10 +48,12 @@ internal static class TimetableSource
     {
         if (string.IsNullOrWhiteSpace(user) || string.IsNullOrWhiteSpace(password))
         {
+            Log.Info("Canvas login forgotten; teacher names will stop being refreshed");
             CredentialStore.Delete(CredentialStore.CanvasTarget);
             return;
         }
 
+        Log.Info("Canvas login saved to Credential Manager");
         CredentialStore.Write(CredentialStore.CanvasTarget, user, password);
     }
 
@@ -79,25 +88,40 @@ internal static class TimetableSource
         var feedUrl = FeedUrl;
         if (feedUrl is null)
         {
+            Log.Warn("Refresh: no feed address is stored, so there is nothing to download");
             return new TimetableOutcome(null, "no calendar set up");
         }
 
         var cached = TimetableCache.Load();
         if (!force && !TimetableCache.IsStale(cached, DateTime.Now))
         {
+            Log.Info("Refresh: the cached week is still fresh, so no download was made");
             return new TimetableOutcome(cached, null);
         }
+
+        Log.Info(force ? "Refresh: downloading because it was asked for" : "Refresh: downloading because the cache is stale");
 
         try
         {
             var fetched = await FetchAsync(feedUrl, settings, DateOnly.FromDateTime(DateTime.Now), cancellationToken)
                 .ConfigureAwait(false);
-            TimetableCache.Save(fetched);
+
+            if (!TimetableCache.Save(fetched))
+            {
+                Log.Warn($"Refresh: the downloaded week could not be cached to {TimetableCache.CachePath}");
+            }
+
             return new TimetableOutcome(fetched, null);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or UriFormatException)
         {
             // Never let a failed download throw away a good cache.
+            Log.Error(
+                cached is null
+                    ? "Refresh: the download failed and there is no cached week to fall back on"
+                    : "Refresh: the download failed, carrying on with the cached week",
+                ex);
+
             return cached is null
                 ? new TimetableOutcome(null, "calendar unreachable")
                 : new TimetableOutcome(cached, "calendar unreachable, showing the last copy");
@@ -123,6 +147,7 @@ internal static class TimetableSource
         using var canvas = new CanvasClient(CanvasClient.SiteOf(feedUrl));
         if (!await canvas.LogInAsync(user, password, cancellationToken).ConfigureAwait(false))
         {
+            Log.Warn("Teacher names: Canvas would not accept the login, so the names are unchanged");
             return false;
         }
 
@@ -132,6 +157,9 @@ internal static class TimetableSource
 
         feed.Teachers = new Dictionary<string, string>(teachers, StringComparer.Ordinal);
         settings.Save();
+        Log.Info(string.Create(
+            CultureInfo.InvariantCulture,
+            $"Teacher names: {known.Count} known before, {feed.Teachers.Count} after"));
         return true;
     }
 }

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
+using TimetableAlert.Core.Diagnostics;
 
 namespace TimetableAlert.Core.Feed;
 
@@ -59,11 +60,13 @@ public sealed partial class CanvasClient : IDisposable
         ArgumentNullException.ThrowIfNull(password);
 
         var loginUrl = new Uri(_baseAddress, "/login/canvas");
+        Log.Info($"Canvas: signing in at {Log.Redact(loginUrl)}");
 
         var form = await _http.GetStringAsync(loginUrl, cancellationToken).ConfigureAwait(false);
         var token = AuthenticityToken().Match(form);
         if (!token.Success)
         {
+            Log.Warn("Canvas: the sign-in page carried no authenticity token, so the login form could not be posted");
             return false;
         }
 
@@ -78,12 +81,15 @@ public sealed partial class CanvasClient : IDisposable
         using var response = await _http.PostAsync(loginUrl, body, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
+            Log.Warn("Canvas: the credentials were rejected");
             return false;
         }
 
         response.EnsureSuccessStatusCode();
         var landedOn = response.RequestMessage?.RequestUri?.Query ?? string.Empty;
-        return landedOn.Contains("login_success", StringComparison.Ordinal);
+        var signedIn = landedOn.Contains("login_success", StringComparison.Ordinal);
+        Log.Info(signedIn ? "Canvas: signed in" : "Canvas: the sign-in did not land on the signed-in page");
+        return signedIn;
     }
 
     /// <summary>
@@ -105,6 +111,10 @@ public sealed partial class CanvasClient : IDisposable
         var courses = await GetAsync<IReadOnlyList<CanvasCourse>>("/api/v1/courses?per_page=100", cancellationToken)
             .ConfigureAwait(false);
 
+        Log.Info(string.Create(
+            CultureInfo.InvariantCulture,
+            $"Canvas: reading teachers for {courses?.Count ?? 0} courses, {known.Count} already known"));
+
         foreach (var course in courses ?? [])
         {
             var id = course.Id.ToString(CultureInfo.InvariantCulture);
@@ -119,10 +129,18 @@ public sealed partial class CanvasClient : IDisposable
 
             if (named.Count == 1)
             {
+                Log.Debug($"Canvas: course {id} \"{course.Name}\" is taught by {named[0]}");
                 teachers[id] = named[0]!;
+            }
+            else
+            {
+                Log.Debug(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Canvas: course {id} \"{course.Name}\" has {named.Count} teachers, so its name is left as it was"));
             }
         }
 
+        Log.Info(string.Create(CultureInfo.InvariantCulture, $"Canvas: {teachers.Count} courses now have a teacher"));
         return teachers;
     }
 

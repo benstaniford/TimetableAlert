@@ -29,6 +29,7 @@ Everything is on the tray icon's menu:
 | **Timetable source…** | Set the calendar feed address, and optionally the parent login used for teacher names. |
 | **Today's lessons** | List what is on today. |
 | **Test overlay** | Show a sample banner, to check the overlay without waiting for a lesson. |
+| **View logs** | Open the log file in Notepad. |
 | **About** | Version and whose timetable is loaded. |
 | **Exit** | Quit. |
 
@@ -42,6 +43,27 @@ The tray tooltip always shows the next lesson.
 
 On first run, if no timetable has been chosen yet, the app loads `timetable.sample.json` from
 its own folder. The installer registers the app to start with Windows.
+
+### Logs
+
+Everything the app does is written to:
+
+```
+%APPDATA%\TimetableAlert\logs\timetable-alert.log
+```
+
+**View logs** on the tray menu opens it in Notepad. Each alert is recorded as it fires, along
+with every calendar download, timetable load, cache read and write, and anything that failed —
+so if a warning did not appear, the log says whether the lesson was known about, whether the
+machine was asleep, and whether the week downloaded.
+
+The file rolls over at 1 MB, keeping three older copies (`timetable-alert.1.log` and so on).
+The feed address is only ever written as its host name — the rest of it is the access token, and
+so a password — and passwords themselves are never logged at all.
+
+For more detail — every tick's status, each lesson in a downloaded week, each course looked up
+on Canvas — start the app with `TIMETABLEALERT_LOG=debug` in the environment. The levels are
+`debug`, `info` (the default), `warn`, `error` and `off`.
 
 ## Installing
 

@@ -1,4 +1,7 @@
+using System.Diagnostics;
+using System.Globalization;
 using System.Net.Http;
+using TimetableAlert.Core.Diagnostics;
 using TimetableAlert.Core.Models;
 
 namespace TimetableAlert.Core.Feed;
@@ -30,7 +33,26 @@ public static class TimetableFeed
         ArgumentNullException.ThrowIfNull(feedUrl);
         ArgumentNullException.ThrowIfNull(options);
 
-        var ics = await Http.GetStringAsync(feedUrl, cancellationToken).ConfigureAwait(false);
+        Log.Info(string.Create(CultureInfo.InvariantCulture, $"Calendar: fetching {Log.Redact(feedUrl)} for the week of {weekOf:yyyy-MM-dd}"));
+
+        var started = Stopwatch.GetTimestamp();
+        string ics;
+        try
+        {
+            ics = await Http.GetStringAsync(feedUrl, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Log.Error(
+                string.Create(CultureInfo.InvariantCulture, $"Calendar: fetch of {Log.Redact(feedUrl)} failed after {Stopwatch.GetElapsedTime(started).TotalMilliseconds:F0} ms"),
+                ex);
+            throw;
+        }
+
+        Log.Info(string.Create(
+            CultureInfo.InvariantCulture,
+            $"Calendar: fetched {ics.Length} characters in {Stopwatch.GetElapsedTime(started).TotalMilliseconds:F0} ms"));
+
         return Build(ics, options, weekOf, DateTimeOffset.Now);
     }
 
@@ -60,18 +82,25 @@ public static class TimetableFeed
         var sunday = monday.AddDays(6);
 
         var lessons = new List<Lesson>();
-        foreach (var entry in IcsParser.Parse(ics))
+        var entries = IcsParser.Parse(ics);
+        var outsideWeek = 0;
+        var unnamed = 0;
+
+        foreach (var entry in entries)
         {
             var start = TimeZoneInfo.ConvertTime(entry.StartsAt, zone).DateTime;
             var date = DateOnly.FromDateTime(start);
             if (date < monday || date > sunday)
             {
+                outsideWeek++;
                 continue;
             }
 
             var subject = SubjectNaming.Subject(entry.Summary, options);
             if (string.IsNullOrWhiteSpace(subject))
             {
+                unnamed++;
+                Log.Debug($"Calendar: dropped an entry with no subject: \"{entry.Summary}\"");
                 continue;
             }
 
@@ -86,6 +115,20 @@ public static class TimetableFeed
             var byDate = Nullable.Compare(a.Date, b.Date);
             return byDate != 0 ? byDate : a.Start.CompareTo(b.Start);
         });
+
+        Log.Info(string.Create(
+            CultureInfo.InvariantCulture,
+            $"Calendar: {entries.Count} timed entries parsed, {lessons.Count} lessons kept for {monday:yyyy-MM-dd}..{sunday:yyyy-MM-dd} ({outsideWeek} outside the week, {unnamed} with no subject)"));
+
+        if (Log.Level == LogLevel.Debug)
+        {
+            foreach (var lesson in lessons)
+            {
+                Log.Debug(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Calendar:   {lesson.Date:yyyy-MM-dd} {lesson.Start:HH:mm} {lesson.Subject}{(lesson.Teacher is null ? string.Empty : " (" + lesson.Teacher + ")")}"));
+            }
+        }
 
         return new Timetable(options.Student, options.Alerts, lessons, monday, sunday, fetchedAt);
     }

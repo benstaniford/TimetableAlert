@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http;
 using System.Windows;
+using TimetableAlert.Core.Diagnostics;
 using TimetableAlert.Services;
 
 namespace TimetableAlert;
@@ -67,6 +68,8 @@ internal sealed partial class TimetableSourceWindow : Window
             return;
         }
 
+        Log.Info($"Timetable source: testing {Log.Redact(feedUrl)}");
+
         using (Busy("Fetching…"))
         {
             try
@@ -78,6 +81,7 @@ internal sealed partial class TimetableSourceWindow : Window
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
+                Log.Error("Timetable source: the test fetch failed", ex);
                 StatusText.Text = $"Could not fetch that address: {ex.Message}";
             }
         }
@@ -117,6 +121,7 @@ internal sealed partial class TimetableSourceWindow : Window
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
             {
+                Log.Error("Timetable source: Canvas could not be reached while refreshing teacher names", ex);
                 StatusText.Text = $"Could not reach Canvas: {ex.Message}";
             }
         }

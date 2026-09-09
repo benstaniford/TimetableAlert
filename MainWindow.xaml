@@ -26,6 +26,7 @@
                     <MenuItem Header="_Today's lessons" Click="TodaysLessons_Click"/>
                     <MenuItem Header="Test _overlay" Click="TestOverlay_Click"/>
                     <Separator/>
+                    <MenuItem Header="_View logs" Click="ViewLogs_Click"/>
                     <MenuItem Header="_About" Click="About_Click"/>
                     <MenuItem Header="E_xit" Click="Exit_Click"/>
                 </ContextMenu>

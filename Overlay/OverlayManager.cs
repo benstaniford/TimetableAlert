@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Windows;
 using Microsoft.Win32;
+using TimetableAlert.Core.Diagnostics;
 
 namespace TimetableAlert.Overlay;
 
@@ -43,6 +45,7 @@ internal sealed class OverlayManager : IDisposable
             }
 
             _visible = true;
+            Log.Debug(string.Create(CultureInfo.InvariantCulture, $"Banner: shown on {_windows.Count} monitor(s)"));
         }
 
         var screens = System.Windows.Forms.Screen.AllScreens;
@@ -83,6 +86,7 @@ internal sealed class OverlayManager : IDisposable
         }
 
         _visible = false;
+        Log.Debug("Banner: hidden");
     }
 
     public void Dispose()
@@ -108,6 +112,7 @@ internal sealed class OverlayManager : IDisposable
 
         CloseWindows();
         _visible = false;
+        Log.Debug(string.Create(CultureInfo.InvariantCulture, $"Banner: building windows for {screenCount} monitor(s)"));
 
         for (var i = 0; i < screenCount; i++)
         {
@@ -144,6 +149,7 @@ internal sealed class OverlayManager : IDisposable
     {
         // Rebuild on the UI thread the next time a banner is shown; a monitor may have come or
         // gone, and window-to-monitor assignments are no longer trustworthy.
+        Log.Info("Display settings changed; the banner windows will be rebuilt before the next alert");
         _ = Application.Current?.Dispatcher.BeginInvoke(() => { _windowsStale = true; });
     }
 }

@@ -45,6 +45,10 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
     `TimetableFeed.FetchAsync` for the same reason, and takes an explicit `TimeZoneInfo` so tests
     do not move with the clock of whatever runs them. `CanvasClient` is the only thing that logs
     in, and only teacher names depend on it.
+  - `Diagnostics/Log` is the whole logging story: a locked, rolling text file under
+    `%APPDATA%\TimetableAlert\logs`, written to by both halves of the app. It lives in Core so
+    the feed can log too. `Log.Redact` cuts a URL back to its host because the feed address is a
+    bearer token in full — the token is in the *path*, so stripping the query would not be enough.
   - `TimetableFreshness.IsStale` holds the re-download rule; `TimetableWriter` renders a timetable
     back out in the format `TimetableLoader` reads, which is what makes the cache file work.
 - **TimetableAlert** (`net10.0-windows`, WPF `WinExe`) — `App.xaml` sets
@@ -63,6 +67,9 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
     feed URL lives there as well as the parent login: the URL carries its own token, so it is a
     password in all but name.
   - `Overlay/` — `OverlayManager` keeps one `OverlayWindow` per monitor and shows them together.
+  - `App.xaml.cs` points the log at `%APPDATA%\TimetableAlert\logs` before anything else runs,
+    and hooks the unhandled-exception and power-mode events into it; **View logs** on the tray
+    menu opens that file in Notepad.
 - **TimetableAlert.Tests** — xUnit over Core.
 - **TimetableAlert.Installer** — WiX v3 MSI: a **per-user** install (`InstallScope="perUser"`)
   into `%LOCALAPPDATA%\Programs\TimetableAlert` so it never triggers UAC, plus Start
@@ -114,6 +121,9 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
   `_countingDownTo`/`_hideBannerAt`, but deliberately leaves `_fired` alone: the dismissed phase's
   key is already in there (which is what stops the next tick re-showing it), and `AlertKey`
   includes the phase, so dismissing the early warning still lets the countdown fire later.
+- **Log call sites compose with `string.Create(CultureInfo.InvariantCulture, $"…")`** whenever
+  anything other than a string is interpolated. A bare `$"…"` with a number, date or enum in it
+  is a CA1305 build error, which is the same reason the UI strings are written that way.
 - **WinForms is referenced only for `Screen.AllScreens`.** Its implicit usings are removed in the
   csproj so `Application` and `MessageBox` unambiguously mean the WPF ones; refer to
   `System.Windows.Forms.Screen` and `System.Drawing.Rectangle` by full name.

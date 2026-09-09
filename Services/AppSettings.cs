@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TimetableAlert.Core.Diagnostics;
 using TimetableAlert.Core.Feed;
 
 namespace TimetableAlert.Services;
@@ -40,6 +41,7 @@ internal sealed class AppSettings
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
         {
+            Log.Error($"Settings: {SettingsPath} could not be read, carrying on with defaults", ex);
             return new AppSettings();
         }
     }
@@ -56,6 +58,7 @@ internal sealed class AppSettings
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             // Nothing useful to do: the app still works, it just will not remember the path.
+            Log.Error($"Settings: {SettingsPath} could not be written", ex);
         }
     }
 }

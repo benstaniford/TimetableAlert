@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
+using TimetableAlert.Core.Diagnostics;
 
 namespace TimetableAlert.Services;
 
@@ -29,6 +31,9 @@ internal static partial class CredentialStore
     {
         if (!CredRead(target, CredTypeGeneric, 0, out var handle))
         {
+            Log.Debug(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Credential Manager: nothing stored under {target} (error {Marshal.GetLastPInvokeError()})"));
             return null;
         }
 
@@ -82,7 +87,15 @@ internal static partial class CredentialStore
                 UserName = userPtr,
             };
 
-            return CredWrite(in credential, 0);
+            var written = CredWrite(in credential, 0);
+            if (!written)
+            {
+                Log.Error(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Credential Manager: refused to store {target} (error {Marshal.GetLastPInvokeError()})"));
+            }
+
+            return written;
         }
         finally
         {
@@ -94,7 +107,11 @@ internal static partial class CredentialStore
     }
 
     /// <summary>Removes a stored secret, saying nothing if there was none.</summary>
-    internal static void Delete(string target) => _ = CredDelete(target, CredTypeGeneric, 0);
+    internal static void Delete(string target)
+    {
+        Log.Debug($"Credential Manager: deleting {target}");
+        _ = CredDelete(target, CredTypeGeneric, 0);
+    }
 
     private static void FreeIfSet(IntPtr pointer)
     {

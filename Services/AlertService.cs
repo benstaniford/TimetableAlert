@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Windows.Threading;
 using TimetableAlert.Core;
+using TimetableAlert.Core.Diagnostics;
 using TimetableAlert.Core.Models;
 using TimetableAlert.Overlay;
 
@@ -50,6 +51,10 @@ internal sealed class AlertService : IDisposable
     {
         ArgumentNullException.ThrowIfNull(timetable);
 
+        Log.Info(string.Create(
+            CultureInfo.InvariantCulture,
+            $"Timetable in use: {timetable.Lessons.Count} lessons{Describe(timetable)}; {_fired.Count} shown warnings forgotten"));
+
         _schedule = new AlertSchedule(timetable);
         _fired.Clear();
         _countingDownTo = null;
@@ -69,9 +74,15 @@ internal sealed class AlertService : IDisposable
         var next = _schedule.NextAfter(now);
         if (next is null || _countingDownTo is not null)
         {
+            Log.Debug(next is null
+                ? "Preview: nothing to preview, there is no next lesson"
+                : "Preview: skipped, a countdown is already on screen");
             return;
         }
 
+        Log.Info(string.Create(
+            CultureInfo.InvariantCulture,
+            $"Preview: showing {next.Lesson.Subject} at {next.StartsAt:yyyy-MM-dd HH:mm}"));
         _overlays.Show(AlertText.Subject(next.Lesson), AlertText.Timing(next.StartsAt, now), AlertText.Detail(next.Lesson));
         _hideBannerAt = now.AddSeconds(_schedule.Timetable.Alerts.FirstWarningSeconds);
     }
@@ -82,6 +93,10 @@ internal sealed class AlertService : IDisposable
         var now = DateTime.Now;
         var next = _schedule.NextAfter(now);
         var seconds = _schedule.Timetable.Alerts.FirstWarningSeconds;
+
+        Log.Info(next is null
+            ? "Test banner: showing the sample banner, there is no next lesson"
+            : $"Test banner: showing {next.Lesson.Subject}");
 
         if (next is null)
         {
@@ -121,6 +136,7 @@ internal sealed class AlertService : IDisposable
 
     public void Dispose()
     {
+        Log.Info("Alerts: stopping");
         _timer.Stop();
         _overlays.Dismissed -= OnOverlayDismissed;
         _overlays.Dispose();
@@ -135,6 +151,9 @@ internal sealed class AlertService : IDisposable
     /// </summary>
     private void OnOverlayDismissed(object? sender, EventArgs e)
     {
+        Log.Info(_countingDownTo is { } lesson
+            ? $"Banner dismissed during the countdown to {lesson.Lesson.Subject}"
+            : "Banner dismissed");
         _countingDownTo = null;
         _hideBannerAt = DateTime.MaxValue;
     }
@@ -144,6 +163,9 @@ internal sealed class AlertService : IDisposable
         var today = DateOnly.FromDateTime(now);
         if (today != _firedOn)
         {
+            Log.Info(string.Create(
+                CultureInfo.InvariantCulture,
+                $"New day: {today:yyyy-MM-dd}, forgetting {_fired.Count} warnings shown on {_firedOn:yyyy-MM-dd}"));
             _fired.Clear();
             _firedOn = today;
         }
@@ -160,6 +182,7 @@ internal sealed class AlertService : IDisposable
             var remaining = lesson.StartsAt - now;
             if (remaining <= TimeSpan.Zero)
             {
+                Log.Info($"Countdown finished: {lesson.Lesson.Subject} has started");
                 _countingDownTo = null;
                 _overlays.Hide();
                 return;
@@ -171,6 +194,7 @@ internal sealed class AlertService : IDisposable
 
         if (_overlays.IsVisible && now >= _hideBannerAt)
         {
+            Log.Debug("Banner: its few seconds are up, hiding it");
             _hideBannerAt = DateTime.MaxValue;
             _overlays.Hide();
         }
@@ -187,6 +211,10 @@ internal sealed class AlertService : IDisposable
         _fired.Add(decision.Key);
 
         var occurrence = decision.Occurrence;
+        Log.Info(string.Create(
+            CultureInfo.InvariantCulture,
+            $"ALERT {decision.Phase}: {occurrence.Lesson.Subject} at {occurrence.StartsAt:HH:mm}, {(occurrence.StartsAt - now).TotalSeconds:F0}s away{(occurrence.Lesson.Teacher is null ? string.Empty : " with " + occurrence.Lesson.Teacher)}"));
+
         _overlays.Show(AlertText.Subject(occurrence.Lesson), AlertText.Timing(occurrence.StartsAt, now), AlertText.Detail(occurrence.Lesson));
 
         if (decision.Phase == AlertPhase.Imminent)
@@ -217,7 +245,22 @@ internal sealed class AlertService : IDisposable
         }
 
         _status = status;
+        Log.Debug($"Status: {status}");
         StatusChanged?.Invoke(this, status);
+    }
+
+    /// <summary>The parts of a timetable worth naming in the log: whose it is, and what it covers.</summary>
+    private static string Describe(Timetable timetable)
+    {
+        var whose = timetable.Student is null ? string.Empty : $" for {timetable.Student}";
+        var covers = timetable.CoversFrom is { } from
+            ? string.Create(CultureInfo.InvariantCulture, $", covering {from:yyyy-MM-dd} to {timetable.CoversUntil:yyyy-MM-dd}")
+            : ", recurring weekly";
+        var fetched = timetable.FetchedAt is { } fetchedAt
+            ? string.Create(CultureInfo.InvariantCulture, $", downloaded {fetchedAt.LocalDateTime:yyyy-MM-dd HH:mm}")
+            : string.Empty;
+
+        return whose + covers + fetched;
     }
 
     private static string DayLabel(DateTime now, DateTime startsAt) => (startsAt.Date - now.Date).Days switch
