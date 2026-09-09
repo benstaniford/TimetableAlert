@@ -94,7 +94,7 @@ internal static partial class CredentialStore
     }
 
     /// <summary>Removes a stored secret, saying nothing if there was none.</summary>
-    internal static void Delete(string target) => CredDelete(target, CredTypeGeneric, 0);
+    internal static void Delete(string target) => _ = CredDelete(target, CredTypeGeneric, 0);
 
     private static void FreeIfSet(IntPtr pointer)
     {

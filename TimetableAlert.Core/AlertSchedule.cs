@@ -42,6 +42,9 @@ public sealed class AlertSchedule
 {
     private const int DaysToLookAhead = 8;
 
+    /// <summary>Handed back for a day with nothing on it, so an empty day allocates nothing.</summary>
+    private static readonly List<(Lesson Lesson, int Index)> NoLessons = [];
+
     private readonly Timetable _timetable;
     private readonly Dictionary<DayOfWeek, List<(Lesson Lesson, int Index)>> _recurringByDay;
     private readonly Dictionary<DateOnly, List<(Lesson Lesson, int Index)>> _datedByDate;
@@ -120,14 +123,14 @@ public sealed class AlertSchedule
     /// practice all of one kind or all of the other, so the merging path is rare and the common
     /// case hands back the already-sorted list without copying it.
     /// </summary>
-    private IReadOnlyList<(Lesson Lesson, int Index)> Occurring(DateOnly date)
+    private List<(Lesson Lesson, int Index)> Occurring(DateOnly date)
     {
         var hasDated = _datedByDate.TryGetValue(date, out var dated);
         var hasRecurring = _recurringByDay.TryGetValue(date.DayOfWeek, out var recurring);
 
         if (!hasDated)
         {
-            return hasRecurring ? recurring! : [];
+            return hasRecurring ? recurring! : NoLessons;
         }
 
         if (!hasRecurring)

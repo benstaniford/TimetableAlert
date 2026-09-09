@@ -11,6 +11,8 @@ namespace TimetableAlert.Core.Feed;
 /// </summary>
 public static class TimetableFeed
 {
+    private static readonly HttpClientHandler Handler = new() { CheckCertificateRevocationList = true };
+
     private static readonly HttpClient Http = CreateClient();
 
     /// <summary>Fetches the feed and builds the timetable for the week containing a date.</summary>
@@ -98,7 +100,7 @@ public static class TimetableFeed
 
     private static HttpClient CreateClient()
     {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        var client = new HttpClient(Handler) { Timeout = TimeSpan.FromSeconds(60) };
         client.DefaultRequestHeaders.Add("User-Agent", "TimetableAlert");
         return client;
     }

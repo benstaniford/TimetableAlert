@@ -31,7 +31,12 @@ public sealed partial class CanvasClient : IDisposable
         ArgumentNullException.ThrowIfNull(baseAddress);
 
         _baseAddress = baseAddress;
-        _handler = new HttpClientHandler { CookieContainer = new CookieContainer(), UseCookies = true };
+        _handler = new HttpClientHandler
+        {
+            CookieContainer = new CookieContainer(),
+            UseCookies = true,
+            CheckCertificateRevocationList = true,
+        };
         _http = new HttpClient(_handler) { Timeout = TimeSpan.FromSeconds(30) };
         _http.DefaultRequestHeaders.Add("User-Agent", "TimetableAlert");
     }
@@ -62,7 +67,7 @@ public sealed partial class CanvasClient : IDisposable
             return false;
         }
 
-        var body = new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
+        using var body = new FormUrlEncodedContent(new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["authenticity_token"] = token.Groups[1].Value,
             ["pseudonym_session[unique_id]"] = user,
@@ -131,8 +136,12 @@ public sealed partial class CanvasClient : IDisposable
     private async Task<T?> GetAsync<T>(string path, CancellationToken cancellationToken)
     {
         var typeInfo = (JsonTypeInfo<T>)CanvasJsonContext.Default.GetTypeInfo(typeof(T))!;
-        await using var stream = await _http.GetStreamAsync(new Uri(_baseAddress, path), cancellationToken).ConfigureAwait(false);
-        return await JsonSerializer.DeserializeAsync(stream, typeInfo, cancellationToken).ConfigureAwait(false);
+        var stream = await _http.GetStreamAsync(new Uri(_baseAddress, path), cancellationToken).ConfigureAwait(false);
+
+        await using (stream.ConfigureAwait(false))
+        {
+            return await JsonSerializer.DeserializeAsync(stream, typeInfo, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     [GeneratedRegex("name=\"authenticity_token\"\\s+value=\"([^\"]+)\"")]
