@@ -137,7 +137,7 @@ internal sealed partial class TimetableSourceWindow : Window
     }
 
     /// <summary>Shows a message and disables the buttons until the work finishes.</summary>
-    private IDisposable Busy(string message)
+    private Restore Busy(string message)
     {
         StatusText.Text = message;
         TestButton.IsEnabled = false;
