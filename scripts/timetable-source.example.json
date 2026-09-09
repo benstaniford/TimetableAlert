@@ -1,0 +1,18 @@
+{
+  "feedUrl": "https://YOURSCHOOL.instructure.com/feeds/calendars/user_00000000-0000-0000-0000-000000000000.ics",
+  "student": "Sam",
+  "timeZone": "Europe/London",
+  "alerts": {
+    "firstWarningMinutes": 7,
+    "firstWarningSeconds": 5,
+    "secondWarningSeconds": 60
+  },
+  "dropWords": ["Core", "Session", "Separate", "Science", "Apollo", "Ceres", "Fortuna", "Juno", "Jupiter", "Luna", "Mars", "Minerva", "Saturn", "Terra", "Vulcan"],
+  "subjects": {
+    "ORIENTATION - Meet Your Head of Year": "Head of Year"
+  },
+  "courses": {
+    "1234": { "name": "GCSE Maths Higher Core Luna", "teacher": "Bailey Bravo" },
+    "5678": { "name": "Year 10", "teacher": "Alex Alpha" }
+  }
+}

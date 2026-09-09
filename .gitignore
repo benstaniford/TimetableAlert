@@ -55,3 +55,10 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# The Canvas calendar feed URL is a bearer token in disguise: anyone holding it can
+# read the calendar, and the timetable it generates names a real child and real
+# teachers. Neither belongs in the repository - only the example config does.
+scripts/timetable-source.json
+timetable.json
+__pycache__/
