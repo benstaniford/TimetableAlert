@@ -1,0 +1,31 @@
+{
+  "student": "Sam",
+  "alerts": {
+    "firstWarningMinutes": 7,
+    "firstWarningSeconds": 5,
+    "secondWarningSeconds": 60
+  },
+  "lessons": [
+    { "day": "Monday",    "start": "08:30", "end": "09:00", "subject": "Assembly",              "teacher": null },
+    { "day": "Monday",    "start": "13:00", "end": "14:00", "subject": "Wellbeing",             "teacher": "Alex Alpha" },
+
+    { "day": "Tuesday",   "start": "09:00", "end": "10:00", "subject": "Maths Higher",          "teacher": "Bailey Bravo" },
+    { "day": "Tuesday",   "start": "10:00", "end": "11:00", "subject": "Geography",             "teacher": "Casey Charlie" },
+    { "day": "Tuesday",   "start": "11:00", "end": "12:00", "subject": "English Literature",    "teacher": "Devon Delta" },
+    { "day": "Tuesday",   "start": "13:00", "end": "14:00", "subject": "English Language",      "teacher": "Ellis Echo" },
+    { "day": "Tuesday",   "start": "14:00", "end": "15:00", "subject": "Biology",               "teacher": "Frankie Foxtrot" },
+
+    { "day": "Wednesday", "start": "08:30", "end": "09:00", "subject": "Head of Year",          "teacher": "Georgie Golf" },
+    { "day": "Wednesday", "start": "09:00", "end": "10:00", "subject": "Classical Civilisation","teacher": "Harper Hotel" },
+    { "day": "Wednesday", "start": "10:00", "end": "11:00", "subject": "Personal Development",  "teacher": "Georgie Golf" },
+    { "day": "Wednesday", "start": "12:30", "end": "13:00", "subject": "Social Room",           "teacher": "Georgie Golf" },
+    { "day": "Wednesday", "start": "13:00", "end": "14:00", "subject": "Chemistry",             "teacher": "Indy India" },
+    { "day": "Wednesday", "start": "14:00", "end": "15:00", "subject": "Religious Studies",     "teacher": "Jules Juliett" },
+
+    { "day": "Thursday",  "start": "11:00", "end": "12:00", "subject": "Maths Higher",          "teacher": "Bailey Bravo" },
+
+    { "day": "Friday",    "start": "09:00", "end": "10:00", "subject": "History",               "teacher": "Kit Kilo" },
+    { "day": "Friday",    "start": "12:30", "end": "13:00", "subject": "Social Room",           "teacher": "Georgie Golf" },
+    { "day": "Friday",    "start": "14:00", "end": "15:00", "subject": "English Language",      "teacher": "Ellis Echo" }
+  ]
+}

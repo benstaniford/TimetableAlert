@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <?define ProductVersion="1.0.0.0" ?>
+  <?define ProductName="Timetable Alert" ?>
+  <?define Manufacturer="Timetable Alert" ?>
+  <?define UpgradeCode="84798E1B-F000-4FC7-B18D-4C1FEFEC4C6B" ?>
+
+  <Product Id="*"
+           Name="$(var.ProductName)"
+           Language="1033"
+           Version="$(var.ProductVersion)"
+           Manufacturer="$(var.Manufacturer)"
+           UpgradeCode="$(var.UpgradeCode)">
+
+    <Package InstallerVersion="200"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Description="$(var.ProductName) Installer"
+             Comments="On-screen reminders before each lesson starts" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Installation directory structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="TimetableAlert">
+          <Directory Id="IconsFolder" Name="icons" />
+        </Directory>
+      </Directory>
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Timetable Alert"/>
+      </Directory>
+
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <!-- Components -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="TimetableAlertExe" Guid="{C41075C6-C968-404F-8575-D2C5BCEC9B0C}">
+        <File Id="TimetableAlertEXE"
+              Source="$(var.TimetableAlert.TargetDir)TimetableAlert.exe"
+              KeyPath="yes"
+              Checksum="yes" />
+        <File Id="TimetableAlertDLL"
+              Source="$(var.TimetableAlert.TargetDir)TimetableAlert.dll" />
+        <File Id="TimetableAlertRuntimeConfigJson"
+              Source="$(var.TimetableAlert.TargetDir)TimetableAlert.runtimeconfig.json" />
+        <File Id="TimetableAlertDepsJsonFile"
+              Source="$(var.TimetableAlert.TargetDir)TimetableAlert.deps.json" />
+      </Component>
+
+      <!-- Timetable parsing and scheduling logic -->
+      <Component Id="TimetableAlertCore" Guid="{5EDF36E9-69EA-41B3-B583-89462F31B646}">
+        <File Id="TimetableAlertCoreDll"
+              Source="$(var.TimetableAlert.TargetDir)TimetableAlert.Core.dll"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- The sample timetable, loaded on first run if no other has been chosen -->
+      <Component Id="SampleTimetable" Guid="{B0F8B270-EB6A-492C-93D9-C346E68BB1B1}">
+        <File Id="TimetableSampleJson"
+              Source="$(var.TimetableAlert.TargetDir)timetable.sample.json"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- NuGet Dependencies - H.NotifyIcon -->
+      <Component Id="HNotifyIcon" Guid="{755F2F13-5FAC-4F34-BA61-785B656CE95C}">
+        <File Id="HNotifyIconWpfDll"
+              Source="$(var.TimetableAlert.TargetDir)H.NotifyIcon.Wpf.dll"
+              KeyPath="yes" />
+      </Component>
+
+      <Component Id="HNotifyIconCore" Guid="{10D95F46-27D6-4AEA-B2CE-71393167E690}">
+        <File Id="HNotifyIconDll"
+              Source="$(var.TimetableAlert.TargetDir)H.NotifyIcon.dll"
+              KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Icons folder component -->
+    <DirectoryRef Id="IconsFolder">
+      <Component Id="IconsComponent" Guid="{98B4CA01-68DB-4A01-8D2A-CE9B07A9DBBF}">
+        <File Id="AppIco"
+              Source="$(var.TimetableAlert.TargetDir)icons\app.ico"
+              KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Start Menu Shortcut -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="{57A9B5C3-9EFE-4A6A-B1AC-1F17B7701822}">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="Timetable Alert"
+                  Description="On-screen reminders before each lesson starts"
+                  Target="[INSTALLFOLDER]TimetableAlert.exe"
+                  WorkingDirectory="INSTALLFOLDER"/>
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU"
+                       Key="Software\TimetableAlert"
+                       Name="installed"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <!-- Desktop Shortcut (Optional) -->
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="{4ACA3E9D-A316-4E15-8A1C-072ACFC6CDD4}">
+        <Shortcut Id="DesktopShortcut"
+                  Name="Timetable Alert"
+                  Description="On-screen reminders before each lesson starts"
+                  Target="[INSTALLFOLDER]TimetableAlert.exe"
+                  WorkingDirectory="INSTALLFOLDER"/>
+        <RemoveFolder Id="CleanUpDesktopShortcut" Directory="DesktopFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU"
+                       Key="Software\TimetableAlert"
+                       Name="desktopShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <!-- Registry entry for Run at startup -->
+    <DirectoryRef Id="TARGETDIR">
+      <Component Id="RegistryEntries" Guid="{8D2221FB-5265-40C3-BB9A-DA6CB014ACCA}">
+        <RegistryKey Root="HKCU" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Run">
+          <RegistryValue Name="TimetableAlert" Value="[INSTALLFOLDER]TimetableAlert.exe" Type="string" KeyPath="yes" />
+        </RegistryKey>
+      </Component>
+    </DirectoryRef>
+
+    <!-- Features -->
+    <Feature Id="ProductFeature" Title="Timetable Alert" Level="1">
+      <ComponentRef Id="TimetableAlertExe" />
+      <ComponentRef Id="TimetableAlertCore" />
+      <ComponentRef Id="SampleTimetable" />
+      <ComponentRef Id="IconsComponent" />
+      <ComponentRef Id="HNotifyIcon" />
+      <ComponentRef Id="HNotifyIconCore" />
+      <ComponentRef Id="ApplicationShortcut" />
+    </Feature>
+
+    <Feature Id="DesktopShortcutFeature" Title="Desktop Shortcut" Level="1">
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+
+    <!-- Auto-start with Windows -->
+    <Feature Id="AutoStartFeature" Title="Start with Windows" Level="1">
+      <ComponentRef Id="RegistryEntries" />
+    </Feature>
+
+    <!-- Custom Action to launch app after installation -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Timetable Alert" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#TimetableAlertEXE]" />
+
+    <CustomAction Id="LaunchApplication"
+                  BinaryKey="WixCA"
+                  DllEntry="WixShellExec"
+                  Impersonate="yes" />
+
+    <InstallExecuteSequence>
+      <Custom Action="LaunchApplication" After="InstallFinalize">
+        WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed
+      </Custom>
+    </InstallExecuteSequence>
+
+    <!-- UI -->
+    <UIRef Id="WixUI_InstallDir" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <!-- License -->
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <!-- Icons -->
+    <Icon Id="app.ico" SourceFile="$(var.TimetableAlert.TargetDir)icons\app.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="app.ico" />
+  </Product>
+</Wix>
