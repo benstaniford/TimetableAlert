@@ -77,9 +77,21 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
 - **The overlay is positioned in physical pixels** via `SetWindowPos`, not through WPF's `Left`
   and `Top`, so it lands correctly on mixed-DPI multi-monitor desktops. `OverlayWindow.PositionOn`
   runs twice because moving a window between monitors of different DPI re-lays-out its content.
-- **Click-through** comes from OR-ing `WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW`
-  into the window's extended style once its HWND exists. Losing any of those makes the banner
-  steal focus or block clicks.
+- **Click-through is answered by hand, not by `WS_EX_TRANSPARENT`.** That style would swallow
+  the dismiss button along with everything else, so `OverlayWindow` ORs in only
+  `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` (losing either makes the banner steal focus or show up in
+  Alt-Tab) and hooks `WM_NCHITTEST` instead: `HTCLIENT` over the ✕, `HTTRANSPARENT` everywhere
+  else, which sends the system on down the z-order. Two things follow:
+  - **Any new interactive element must paint pixels with non-zero alpha.** This is a layered
+    window (`AllowsTransparency="True"`), and Windows lets the mouse through zero-alpha pixels
+    before the hook ever runs — a `Background="Transparent"` hit area is not clickable at all.
+  - The hit test walks the visual tree rather than testing the button's rectangle, so the
+    clickable area is the circle actually drawn. `WM_MOUSEACTIVATE` is answered `MA_NOACTIVATE`
+    so a click delivers without taking focus.
+- **Dismissal is scoped to one banner, not one lesson.** The ✕ hides all monitors and clears
+  `_countingDownTo`/`_hideBannerAt`, but deliberately leaves `_fired` alone: the dismissed phase's
+  key is already in there (which is what stops the next tick re-showing it), and `AlertKey`
+  includes the phase, so dismissing the early warning still lets the countdown fire later.
 - **WinForms is referenced only for `Screen.AllScreens`.** Its implicit usings are removed in the
   csproj so `Application` and `MessageBox` unambiguously mean the WPF ones; refer to
   `System.Windows.Forms.Screen` and `System.Drawing.Rectangle` by full name.

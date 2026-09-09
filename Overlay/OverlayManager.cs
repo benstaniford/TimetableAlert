@@ -9,7 +9,7 @@ namespace TimetableAlert.Overlay;
 /// happens to be looking at. Windows are created once and reused, and rebuilt if the display
 /// arrangement changes.
 /// </summary>
-[SuppressMessage("Design", "CA1063:Implement IDisposable Correctly", Justification = "Sealed, no finalizer, only managed state and one static event subscription to release")]
+[SuppressMessage("Design", "CA1063:Implement IDisposable Correctly", Justification = "Sealed, no finalizer, only managed state, one static event subscription and the per-window Dismissed handlers released in CloseWindows to release")]
 internal sealed class OverlayManager : IDisposable
 {
     private readonly List<OverlayWindow> _windows = [];
@@ -18,6 +18,9 @@ internal sealed class OverlayManager : IDisposable
     private bool _disposed;
 
     public OverlayManager() => SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+
+    /// <summary>Raised when the banner's dismiss button is clicked, after every window is hidden.</summary>
+    public event EventHandler? Dismissed;
 
     /// <summary>True while a banner is on screen.</summary>
     public bool IsVisible => _visible;
@@ -108,7 +111,9 @@ internal sealed class OverlayManager : IDisposable
 
         for (var i = 0; i < screenCount; i++)
         {
-            _windows.Add(new OverlayWindow());
+            var window = new OverlayWindow();
+            window.Dismissed += OnWindowDismissed;
+            _windows.Add(window);
         }
 
         _windowsStale = false;
@@ -118,10 +123,21 @@ internal sealed class OverlayManager : IDisposable
     {
         foreach (var window in _windows)
         {
+            window.Dismissed -= OnWindowDismissed;
             window.Close();
         }
 
         _windows.Clear();
+    }
+
+    /// <summary>
+    /// One dismiss button takes the banner off every monitor: they are all saying the same thing,
+    /// so dismissing on one screen means dismissing all of them.
+    /// </summary>
+    private void OnWindowDismissed(object? sender, EventArgs e)
+    {
+        Hide();
+        Dismissed?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnDisplaySettingsChanged(object? sender, EventArgs e)

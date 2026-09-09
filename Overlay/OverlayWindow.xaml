@@ -14,41 +14,106 @@
         Focusable="False"
         WindowStartupLocation="Manual"
         ResizeMode="NoResize">
-    <Border Margin="16"
-            Padding="32,20"
-            CornerRadius="14"
-            Background="#F0121216"
-            BorderBrush="#FFFF3B30"
-            BorderThickness="2">
-        <Border.Effect>
-            <DropShadowEffect Color="#FF000000" BlurRadius="24" ShadowDepth="0" Opacity="0.8"/>
-        </Border.Effect>
-        <StackPanel>
-            <TextBlock x:Name="SubjectText"
-                       Text="LESSON"
-                       Foreground="#FFFF3B30"
-                       FontFamily="Segoe UI Variable Display, Segoe UI"
-                       FontSize="40"
-                       FontWeight="Bold"
-                       TextWrapping="Wrap"
-                       TextAlignment="Center"/>
-            <TextBlock x:Name="TimingText"
-                       Text="starting soon"
-                       Margin="0,2,0,0"
-                       Foreground="#FFFF6B60"
-                       FontFamily="Segoe UI Variable Text, Segoe UI"
-                       FontSize="26"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap"
-                       TextAlignment="Center"/>
-            <TextBlock x:Name="DetailText"
-                       Text=""
-                       Margin="0,8,0,0"
-                       Foreground="#FFD9938E"
-                       FontFamily="Segoe UI Variable Text, Segoe UI"
-                       FontSize="18"
-                       TextWrapping="Wrap"
-                       TextAlignment="Center"/>
-        </StackPanel>
-    </Border>
+    <Window.Resources>
+        <!-- The only thing in the window that accepts a click. Every brush here has a non-zero
+             alpha on purpose: this is a layered window, and Windows lets the mouse straight
+             through any pixel whose alpha is zero, before the hit-test hook ever runs. -->
+        <Style x:Key="DismissButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                CornerRadius="18"
+                                Background="#33FF3B30"
+                                BorderBrush="#66FF3B30"
+                                BorderThickness="1"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Path x:Name="Glyph"
+                                  Data="M 0,0 L 12,12 M 12,0 L 0,12"
+                                  Stroke="#FFD9938E"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#59FF3B30"/>
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#FFFF3B30"/>
+                                <Setter TargetName="Glyph" Property="Stroke" Value="#FFFFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#8CFF3B30"/>
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#FFFF3B30"/>
+                                <Setter TargetName="Glyph" Property="Stroke" Value="#FFFFFFFF"/>
+                                <Setter TargetName="Chrome" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.94" ScaleY="0.94"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Border Margin="16"
+                Padding="32,20"
+                CornerRadius="14"
+                Background="#F0121216"
+                BorderBrush="#FFFF3B30"
+                BorderThickness="2"
+                IsHitTestVisible="False">
+            <Border.Effect>
+                <DropShadowEffect Color="#FF000000" BlurRadius="24" ShadowDepth="0" Opacity="0.8"/>
+            </Border.Effect>
+            <StackPanel>
+                <!-- The side margins keep a long, wrapping subject clear of the dismiss button. -->
+                <TextBlock x:Name="SubjectText"
+                           Text="LESSON"
+                           Margin="44,0,44,0"
+                           Foreground="#FFFF3B30"
+                           FontFamily="Segoe UI Variable Display, Segoe UI"
+                           FontSize="40"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"/>
+                <TextBlock x:Name="TimingText"
+                           Text="starting soon"
+                           Margin="0,2,0,0"
+                           Foreground="#FFFF6B60"
+                           FontFamily="Segoe UI Variable Text, Segoe UI"
+                           FontSize="26"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"/>
+                <TextBlock x:Name="DetailText"
+                           Text=""
+                           Margin="0,8,0,0"
+                           Foreground="#FFD9938E"
+                           FontFamily="Segoe UI Variable Text, Segoe UI"
+                           FontSize="18"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"/>
+            </StackPanel>
+        </Border>
+        <!-- A sibling of the banner, not a child of it: hit-testing never reaches the children
+             of an element that is not itself hit-test visible. -->
+        <Button x:Name="DismissButton"
+                Style="{StaticResource DismissButtonStyle}"
+                Width="36"
+                Height="36"
+                Margin="0,22,22,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Cursor="Hand"
+                Focusable="False"
+                IsTabStop="False"
+                ToolTip="Dismiss"
+                AutomationProperties.Name="Dismiss banner"
+                Click="DismissButton_Click"/>
+    </Grid>
 </Window>

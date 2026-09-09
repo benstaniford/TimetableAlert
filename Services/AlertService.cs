@@ -32,6 +32,8 @@ internal sealed class AlertService : IDisposable
         };
         _timer.Tick += (_, _) => Tick(DateTime.Now);
         _timer.Start();
+
+        _overlays.Dismissed += OnOverlayDismissed;
     }
 
     /// <summary>Raised when the tray tooltip text should change.</summary>
@@ -120,8 +122,21 @@ internal sealed class AlertService : IDisposable
     public void Dispose()
     {
         _timer.Stop();
+        _overlays.Dismissed -= OnOverlayDismissed;
         _overlays.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// The banner is already off screen by the time this runs; all that is left is to forget the
+    /// state that would put it back. <c>_fired</c> is deliberately untouched: the key for the
+    /// phase just dismissed is already in it, which is what stops the next tick re-showing it,
+    /// and the countdown's key is separate, so dismissing the early warning still leaves it to come.
+    /// </summary>
+    private void OnOverlayDismissed(object? sender, EventArgs e)
+    {
+        _countingDownTo = null;
+        _hideBannerAt = DateTime.MaxValue;
     }
 
     private void Tick(DateTime now)

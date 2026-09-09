@@ -12,6 +12,11 @@ The banner appears on **every monitor**, always on top, and is **click-through**
 focus and mouse clicks pass straight through to whatever is underneath, so it interrupts you
 visually without interrupting what you are doing.
 
+The one exception is the **✕ in the top-right corner**, which dismisses the banner from every
+monitor at once. Clicking it does not steal focus either — you can swat the banner away without
+losing your place in whatever you were typing. Dismissing the 7-minute warning still leaves the
+60-second countdown to come; dismissing the countdown is final for that lesson.
+
 ## Using it
 
 Everything is on the tray icon's menu:

@@ -141,6 +141,38 @@ public class AlertScheduleTests
     }
 
     [Fact]
+    public void Evaluate_AfterTheEarlyWarningIsDismissedStillGivesTheCountdown()
+    {
+        // Swatting the seven-minute warning away must not cost him the one that matters.
+        var schedule = OneMondayLesson();
+        var fired = new HashSet<AlertKey>();
+        var start = Monday.AddHours(9);
+
+        var early = schedule.Evaluate(start.AddMinutes(-7), fired);
+        Assert.Equal(AlertPhase.Early, early!.Phase);
+        fired.Add(early.Key);
+
+        Assert.Null(schedule.Evaluate(start.AddMinutes(-6), fired));
+        Assert.Equal(AlertPhase.Imminent, schedule.Evaluate(start.AddSeconds(-30), fired)!.Phase);
+    }
+
+    [Fact]
+    public void Evaluate_AfterTheCountdownIsDismissedStaysQuietUntilTheLessonStarts()
+    {
+        var schedule = OneMondayLesson();
+        var fired = new HashSet<AlertKey>();
+        var start = Monday.AddHours(9);
+
+        var countdown = schedule.Evaluate(start.AddSeconds(-60), fired);
+        Assert.Equal(AlertPhase.Imminent, countdown!.Phase);
+        fired.Add(countdown.Key);
+
+        Assert.Null(schedule.Evaluate(start.AddSeconds(-45), fired));
+        Assert.Null(schedule.Evaluate(start.AddSeconds(-1), fired));
+        Assert.Null(schedule.Evaluate(start, fired));
+    }
+
+    [Fact]
     public void Evaluate_AfterWakingMidRunUpGivesOnlyTheCountdown()
     {
         // The machine was asleep through the seven-minute mark and wakes at T-30s.
