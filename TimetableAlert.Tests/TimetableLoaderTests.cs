@@ -135,4 +135,85 @@ public class TimetableLoaderTests
         Assert.False(result.Success);
         Assert.Contains("further ahead", result.ErrorSummary, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void ParseJson_ReadsADownloadedWeek()
+    {
+        var result = TimetableLoader.ParseJson("""
+            {
+              "student": "Sam",
+              "coversFrom": "2026-09-07",
+              "coversUntil": "2026-09-13",
+              "lessons": [ { "date": "2026-09-08", "start": "09:00", "end": "10:00", "subject": "Maths" } ]
+            }
+            """);
+
+        Assert.True(result.Success, result.ErrorSummary);
+        var timetable = result.Timetable!;
+
+        Assert.Equal(new DateOnly(2026, 9, 7), timetable.CoversFrom);
+        Assert.Equal(new DateOnly(2026, 9, 13), timetable.CoversUntil);
+
+        var lesson = Assert.Single(timetable.Lessons);
+        Assert.Equal(new DateOnly(2026, 9, 8), lesson.Date);
+        Assert.Equal(DayOfWeek.Tuesday, lesson.Day);
+        Assert.True(lesson.IsDated);
+    }
+
+    [Fact]
+    public void ParseJson_TreatsAHandWrittenLessonAsRecurring()
+    {
+        var lesson = Assert.Single(TimetableLoader.ParseJson(MinimalJson).Timetable!.Lessons);
+
+        Assert.Null(lesson.Date);
+        Assert.False(lesson.IsDated);
+    }
+
+    [Fact]
+    public void ParseJson_RejectsALessonWithNeitherDayNorDate()
+    {
+        var result = TimetableLoader.ParseJson("""
+            { "lessons": [ { "start": "09:00", "subject": "Maths" } ] }
+            """);
+
+        Assert.False(result.Success);
+        Assert.Contains("needs a day of the week or a date", result.ErrorSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseJson_RejectsADayThatContradictsItsDate()
+    {
+        var result = TimetableLoader.ParseJson("""
+            { "lessons": [ { "day": "Monday", "date": "2026-09-08", "start": "09:00", "subject": "Maths" } ] }
+            """);
+
+        Assert.False(result.Success);
+        Assert.Contains("is a Tuesday, not a Monday", result.ErrorSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseJson_RejectsAMalformedDate()
+    {
+        var result = TimetableLoader.ParseJson("""
+            { "lessons": [ { "date": "8th September", "start": "09:00", "subject": "Maths" } ] }
+            """);
+
+        Assert.False(result.Success);
+        Assert.Contains("is not a date of the form yyyy-MM-dd", result.ErrorSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseJson_RejectsACoveringWindowThatRunsBackwards()
+    {
+        var result = TimetableLoader.ParseJson("""
+            {
+              "coversFrom": "2026-09-13",
+              "coversUntil": "2026-09-07",
+              "lessons": [ { "day": "Monday", "start": "09:00", "subject": "Maths" } ]
+            }
+            """);
+
+        Assert.False(result.Success);
+        Assert.Contains("coversUntil is before coversFrom", result.ErrorSummary, StringComparison.Ordinal);
+    }
 }

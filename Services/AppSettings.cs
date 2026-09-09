@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TimetableAlert.Core.Feed;
 
 namespace TimetableAlert.Services;
 
@@ -9,6 +10,12 @@ internal sealed class AppSettings
 {
     /// <summary>Full path of the timetable file last loaded from the tray menu.</summary>
     public string? TimetablePath { get; set; }
+
+    /// <summary>
+    /// How the downloaded calendar is turned into a timetable. Only the harmless half lives here;
+    /// the feed URL and the Canvas login are secrets and live in Credential Manager instead.
+    /// </summary>
+    public FeedSettings? Feed { get; set; }
 
     /// <summary>The folder holding the settings file: %APPDATA%\TimetableAlert.</summary>
     public static string SettingsFolder { get; } = Path.Combine(
@@ -51,6 +58,34 @@ internal sealed class AppSettings
             // Nothing useful to do: the app still works, it just will not remember the path.
         }
     }
+}
+
+/// <summary>The saved half of <see cref="FeedOptions"/>: naming rules and teacher names.</summary>
+internal sealed class FeedSettings
+{
+    /// <summary>Whose timetable it is.</summary>
+    public string? Student { get; set; }
+
+    /// <summary>Trailing words stripped off a calendar title; the built-in list when empty.</summary>
+    public List<string>? DropWords { get; set; }
+
+    /// <summary>Exact calendar titles mapped to a subject; the built-in list when empty.</summary>
+    public Dictionary<string, string>? SubjectOverrides { get; set; }
+
+    /// <summary>Canvas course id to teacher name, as last refreshed.</summary>
+    public Dictionary<string, string>? Teachers { get; set; }
+
+    /// <summary>Turns the saved settings into options the downloader can use.</summary>
+    public FeedOptions ToOptions() => new()
+    {
+        Student = Student,
+        DropWords = DropWords is { Count: > 0 } ? DropWords : FeedOptions.Default.DropWords,
+        SubjectOverrides = SubjectOverrides is { Count: > 0 }
+            ? new Dictionary<string, string>(SubjectOverrides, StringComparer.OrdinalIgnoreCase)
+            : FeedOptions.Default.SubjectOverrides,
+        TeachersByCourseId = new Dictionary<string, string>(
+            Teachers ?? new Dictionary<string, string>(StringComparer.Ordinal), StringComparer.Ordinal),
+    };
 }
 
 /// <summary>Source-generated JSON contract for <see cref="AppSettings"/>.</summary>

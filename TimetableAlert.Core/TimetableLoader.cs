@@ -21,6 +21,8 @@ public static class TimetableLoader
 {
     private static readonly string[] TimeFormats = ["HH:mm", "H:mm", "HH:mm:ss", "H:mm:ss"];
 
+    private static readonly string[] DateFormats = ["yyyy-MM-dd"];
+
     private static readonly Dictionary<string, DayOfWeek> DayNames = BuildDayNames();
 
     /// <summary>Reads and validates the timetable at <paramref name="path"/>.</summary>
@@ -55,10 +57,19 @@ public static class TimetableLoader
         var errors = new List<string>();
         var alerts = ReadAlerts(file.Alerts, errors);
         var lessons = ReadLessons(file.Lessons, errors);
+        var coversFrom = ReadCoveringDate(file.CoversFrom, "coversFrom", errors);
+        var coversUntil = ReadCoveringDate(file.CoversUntil, "coversUntil", errors);
+
+        if (coversFrom is { } from && coversUntil is { } until && until < from)
+        {
+            errors.Add("coversUntil is before coversFrom.");
+        }
 
         return errors.Count > 0
             ? new TimetableLoadResult(null, errors)
-            : new TimetableLoadResult(new Timetable(file.Student, alerts, lessons), []);
+            : new TimetableLoadResult(
+                new Timetable(file.Student, alerts, lessons, coversFrom, coversUntil, file.FetchedAt),
+                []);
     }
 
     private static AlertOptions ReadAlerts(TimetableFile.AlertsSection? section, List<string> errors)
@@ -116,10 +127,7 @@ public static class TimetableLoader
                 errors.Add($"{label}: subject is missing.");
             }
 
-            if (!TryParseDay(entry.Day, out var day))
-            {
-                errors.Add($"{label}: '{entry.Day}' is not a day of the week.");
-            }
+            var day = ReadWhen(entry, label, errors, out var date);
 
             if (!TryParseTime(entry.Start, out var start))
             {
@@ -142,11 +150,78 @@ public static class TimetableLoader
             if (errors.Count == errorsBefore)
             {
                 var teacher = string.IsNullOrWhiteSpace(entry.Teacher) ? null : entry.Teacher.Trim();
-                lessons.Add(new Lesson(day, start, end, entry.Subject!.Trim(), teacher));
+                lessons.Add(new Lesson(day, start, end, entry.Subject!.Trim(), teacher, date));
             }
         }
 
         return lessons;
+    }
+
+    /// <summary>
+    /// Works out when a lesson happens. A "date" pins it to one day, which is what a downloaded
+    /// week gives; a "day" alone makes it recur weekly, which is what hand-written files give.
+    /// One or the other is required, and if both are present they have to agree.
+    /// </summary>
+    private static DayOfWeek ReadWhen(TimetableFile.LessonSection entry, string label, List<string> errors, out DateOnly? date)
+    {
+        date = null;
+        var hasDay = !string.IsNullOrWhiteSpace(entry.Day);
+        var hasDate = !string.IsNullOrWhiteSpace(entry.Date);
+
+        if (!hasDay && !hasDate)
+        {
+            errors.Add($"{label}: needs a day of the week or a date.");
+            return default;
+        }
+
+        var day = default(DayOfWeek);
+        if (hasDay && !TryParseDay(entry.Day, out day))
+        {
+            errors.Add($"{label}: '{entry.Day}' is not a day of the week.");
+        }
+
+        if (!hasDate)
+        {
+            return day;
+        }
+
+        if (!TryParseDate(entry.Date, out var parsed))
+        {
+            errors.Add($"{label}: '{entry.Date}' is not a date of the form yyyy-MM-dd.");
+            return day;
+        }
+
+        if (hasDay && day != parsed.DayOfWeek)
+        {
+            errors.Add($"{label}: {entry.Date} is a {parsed.DayOfWeek}, not a {entry.Day!.Trim()}.");
+            return day;
+        }
+
+        date = parsed;
+        return parsed.DayOfWeek;
+    }
+
+    private static DateOnly? ReadCoveringDate(string? value, string label, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (TryParseDate(value, out var parsed))
+        {
+            return parsed;
+        }
+
+        errors.Add($"{label}: '{value}' is not a date of the form yyyy-MM-dd.");
+        return null;
+    }
+
+    private static bool TryParseDate(string? value, out DateOnly date)
+    {
+        date = default;
+        return !string.IsNullOrWhiteSpace(value)
+            && DateOnly.TryParseExact(value.Trim(), DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
     }
 
     private static bool TryParseDay(string? value, out DayOfWeek day)

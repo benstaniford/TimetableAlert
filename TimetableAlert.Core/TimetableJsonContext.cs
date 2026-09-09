@@ -28,3 +28,15 @@ public static class TimetableJson
         AllowTrailingCommas = true,
     };
 }
+
+/// <summary>
+/// Source-generated JSON contract used to write a timetable back out. Kept separate from the
+/// reader so the file the app caches looks like one a person would write: camel-cased, indented,
+/// and without a spray of nulls.
+/// </summary>
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    WriteIndented = true,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+[JsonSerializable(typeof(TimetableFile))]
+public sealed partial class TimetableWriteJsonContext : JsonSerializerContext;

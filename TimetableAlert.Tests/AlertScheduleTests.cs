@@ -241,4 +241,60 @@ public class AlertScheduleTests
         Assert.Equal(AlertPhase.Early, schedule.Evaluate(start.AddMinutes(-15), new HashSet<AlertKey>())!.Phase);
         Assert.Equal(AlertPhase.Imminent, schedule.Evaluate(start.AddSeconds(-120), new HashSet<AlertKey>())!.Phase);
     }
+
+    [Fact]
+    public void LessonsOn_KeepsDatedLessonsOffTheWeeklyPattern()
+    {
+        // A downloaded week holds only dated lessons, so asking by weekday must not find them:
+        // that is what stops the pattern outliving the week it was fetched for.
+        var schedule = Build(Lesson.OnDate(new DateOnly(2026, 9, 7), new TimeOnly(9, 0), null, "Orientation", null));
+
+        Assert.Empty(schedule.LessonsOn(DayOfWeek.Monday));
+        Assert.Single(schedule.LessonsOn(new DateOnly(2026, 9, 7)));
+    }
+
+    [Fact]
+    public void LessonsOn_MergesDatedAndRecurringLessonsInTimeOrder()
+    {
+        var schedule = Build(
+            new Lesson(DayOfWeek.Monday, new TimeOnly(13, 0), null, "Wellbeing", null),
+            Lesson.OnDate(new DateOnly(2026, 9, 7), new TimeOnly(9, 0), null, "Orientation", null));
+
+        var order = schedule.LessonsOn(new DateOnly(2026, 9, 7)).Select(lesson => lesson.Subject).ToArray();
+
+        Assert.Equal(new[] { "Orientation", "Wellbeing" }, order);
+    }
+
+    [Fact]
+    public void NextAfter_FindsADatedLessonOnItsOwnDate()
+    {
+        var schedule = Build(Lesson.OnDate(new DateOnly(2026, 9, 11), new TimeOnly(9, 0), null, "History", null));
+
+        var next = schedule.NextAfter(Monday);
+
+        Assert.NotNull(next);
+        Assert.Equal(Friday.AddHours(9), next.StartsAt);
+    }
+
+    [Fact]
+    public void NextAfter_DoesNotRepeatADatedLessonTheFollowingWeek()
+    {
+        var schedule = Build(Lesson.OnDate(new DateOnly(2026, 9, 7), new TimeOnly(9, 0), null, "Orientation", null));
+
+        Assert.NotNull(schedule.NextAfter(Monday));
+        Assert.Null(schedule.NextAfter(Monday.AddDays(7)));
+    }
+
+    [Fact]
+    public void Evaluate_WarnsAboutADatedLessonJustAsItWouldARecurringOne()
+    {
+        var schedule = Build(Lesson.OnDate(new DateOnly(2026, 9, 7), new TimeOnly(9, 0), null, "Orientation", null));
+        var start = Monday.AddHours(9);
+
+        var decision = schedule.Evaluate(start.AddMinutes(-7), new HashSet<AlertKey>());
+
+        Assert.NotNull(decision);
+        Assert.Equal(AlertPhase.Early, decision.Phase);
+        Assert.Equal("Orientation", decision.Occurrence.Lesson.Subject);
+    }
 }

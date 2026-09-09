@@ -25,6 +25,8 @@ Everything is on the tray icon's menu:
 |---|---|
 | **Load timetable…** | Pick a timetable JSON file. The path is remembered, and the next lesson's banner is previewed. |
 | **Reload timetable** | Re-read the current file after editing it, and preview the next lesson's banner. |
+| **Refresh from calendar** | Download this week from the school calendar now, without waiting for the cached copy to expire. |
+| **Timetable source…** | Set the calendar feed address, and optionally the parent login used for teacher names. |
 | **Today's lessons** | List what is on today. |
 | **Test overlay** | Show a sample banner, to check the overlay without waiting for a lesson. |
 | **About** | Version and whose timetable is loaded. |
@@ -65,10 +67,17 @@ before installing this one; a per-user installer has no way to remove a per-mach
 }
 ```
 
-- `day` — full or three-letter name, any case: `Monday`, `mon`, `THURSDAY`.
+- `day` — full or three-letter name, any case: `Monday`, `mon`, `THURSDAY`. A lesson given a `day`
+  repeats every week, which is what you want in a file you maintain by hand.
+- `date` — `yyyy-MM-dd`, an alternative to `day`. A lesson given a `date` happens once, on that
+  day, and never again. This is what a downloaded week uses, so a one-off — an orientation, a
+  mentor session — does not come back next Tuesday. Give one or the other; if you give both they
+  have to agree.
 - `start`, `end` — 24-hour local time, `HH:mm`. `end` is optional and used only for display.
 - `teacher` — optional.
 - `student` — optional; shown in the About box.
+- `coversFrom`, `coversUntil`, `fetchedAt` — written by the app on a downloaded week to record
+  which week it speaks for and when it was fetched. Not needed in a hand-written file.
 - `alerts` — optional; the values above are the defaults. Change these to move the warnings
   without rebuilding the app. The early warning must be further ahead than the countdown.
 
@@ -78,63 +87,66 @@ The whole file is validated on load, and anything wrong is reported naming the e
 `timetable.sample.json` in this repository is a made-up week — the student and teachers are
 fictional — laid out like a real one, and is a good starting point to edit.
 
-## Regenerating the timetable from the school calendar
+## Getting the timetable from the school calendar
 
-Timetables drift from week to week, so `scripts/fetch-timetable.py` rebuilds the JSON from the
-school's live calendar rather than having you retype it. It reads the **Canvas calendar feed** —
-the `.ics` URL behind the *Calendar Feed* button at the bottom right of the Canvas calendar page.
-That URL carries its own token, so the script needs no password to fetch lesson times.
+Timetables drift from week to week, so the app can rebuild its own from the school's live Canvas
+calendar instead of being edited by hand.
 
-```bash
-./scripts/fetch-timetable.py                 # this week   -> timetable.json
-./scripts/fetch-timetable.py --week next     # next week
-./scripts/fetch-timetable.py --week 2026-09-21 -o term3.json
-```
+Open **Timetable source…** on the tray menu and paste the **calendar feed address** — the `.ics`
+URL behind the *Calendar Feed* button at the bottom right of the Canvas calendar page. That is all
+that is needed: the address carries its own token, so downloading lessons never asks for a
+password. **Test** checks it and says how many lessons it found.
 
-Then **Reload timetable** on the tray menu.
+From then on the app fetches the current week itself. It keeps the last copy in
+`%APPDATA%\TimetableAlert\timetable.cache.json` and only downloads again when that copy has
+expired, which means either of:
 
-### Setting it up
+- it is more than **12 hours** old, or
+- the week it covers no longer includes today.
 
-Copy the example config and put your own feed URL in it:
+So a normal logon uses the cached copy and touches the network at most twice a day. If a download
+fails, the app carries on with the cached copy and says so in the tray tooltip, rather than going
+quiet. A cached week never outlives itself: because every downloaded lesson carries its real date,
+last week's timetable cannot go on firing this week's alerts.
 
-```bash
-cp scripts/timetable-source.example.json scripts/timetable-source.json
-```
-
-Both `scripts/timetable-source.json` and the `timetable.json` it generates are gitignored, and
-should stay that way: **the feed URL is a bearer token in disguise** — anyone holding it can read
-the calendar — and the generated timetable names a real child and real teachers. The config also
-holds:
-
-| Key | What it is |
-|---|---|
-| `student`, `alerts` | Copied straight into the generated file. |
-| `timeZone` | IANA name, default `Europe/London`. Feed times are UTC and are converted to this. |
-| `dropWords` | Trailing words to strip from a calendar title: teaching-set names (`Luna`, `Ceres`, …) and filler like `Core`. |
-| `subjects` | Exact-title overrides, for entries the general rules cannot tidy. |
-| `courses` | Course id → teacher name, since the feed does not carry teachers. |
-
-A title becomes a subject by dropping the trailing `[10MaHLun]` course code, then the year-group
-prefix, then any trailing `dropWords`: `Y10 Maths Higher Core Luna [10MaHLun]` → `Maths Higher`.
-An entry in `subjects` short-circuits all of that.
+> **Treat the feed address like a password.** Anyone holding it can read the calendar. It is stored
+> in Windows Credential Manager, not in any settings file.
 
 ### Teacher names
 
-The feed has no teachers in it, so they come from the `courses` map. To rebuild that map, this
-one command logs in to Canvas:
+The calendar feed does not carry teacher names. To fill them in, add the **parent** Canvas
+username and password in the same dialog and press **Refresh teacher names**. They are stored in
+Credential Manager and used only for that button — never for the ordinary weekly download.
+
+A course with exactly one teacher, ignoring the operations accounts every course carries, is
+matched automatically. Year-group courses — assembly, social room, personal development — list the
+whole year team, so those stay as they are and can be set by hand in
+`%APPDATA%\TimetableAlert\settings.json`; a refresh will not overwrite them.
+
+Student logins will not work here: they go through Google, and only the parent account has a
+Canvas password.
+
+### Doing it from the command line instead
+
+`scripts/fetch-timetable.py` does the same job outside the app, writing a timetable JSON you can
+load with **Load timetable…**. It is useful for generating a file on another machine, or for
+seeing what the tidying rules make of a title.
 
 ```bash
-CANVAS_USER='...' CANVAS_PASS='...' ./scripts/fetch-timetable.py --refresh-teachers
+cp scripts/timetable-source.example.json scripts/timetable-source.json   # then add your feed URL
+./scripts/fetch-timetable.py                 # this week   -> timetable.json
+./scripts/fetch-timetable.py --week next     # next week
 ```
 
-The credentials are read from the environment for that single request and never written to disk.
-A course with exactly one teacher (besides the operations accounts every course carries) gets
-filled in automatically. Year-group courses — assembly, social room, personal development — list
-the whole year team, so the script leaves whatever the config already says: set those by hand
-once, and a refresh will not clobber them.
+`scripts/timetable-source.json` is gitignored and should stay that way, for the same reason as
+above. Needs Python 3.9+ and no third-party packages.
 
-Needs Python 3.9+ and no third-party packages. On Windows, `zoneinfo` needs the system time zone
-database: `pip install tzdata` if you get a `ZoneInfoNotFoundError`.
+### How a calendar title becomes a subject
+
+`Y10 Maths Higher Core Luna [10MaHLun]` becomes `Maths Higher`: the trailing course code comes off,
+then the year-group prefix, then any trailing "drop words" — teaching-set names like `Luna` and
+`Ceres`, and filler like `Core`. Titles the rules cannot tidy are mapped outright. Both lists live
+in `settings.json` under `feed`, and in `scripts/timetable-source.example.json` for the script.
 
 ## Building
 

@@ -8,8 +8,10 @@
     <ApplicationIcon>icons\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- CA1303: this is a single-user, English-only app; UI strings are literals by design. -->
-    <NoWarn>$(NoWarn);NETSDK1233;CA1303</NoWarn>
+    <!-- CA1303: this is a single-user, English-only app; UI strings are literals by design.
+         CA2007: this is a UI app, and every await here has to come back on the dispatcher
+         thread to touch the tray icon or a window, so ConfigureAwait(false) would be wrong. -->
+    <NoWarn>$(NoWarn);NETSDK1233;CA1303;CA2007</NoWarn>
     <DefaultItemExcludes>$(DefaultItemExcludes);TimetableAlert.Tests\**;TimetableAlert.Core\**;TimetableAlert.Installer\**</DefaultItemExcludes>
   </PropertyGroup>
 

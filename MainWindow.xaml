@@ -20,6 +20,9 @@
                     <MenuItem Header="_Load timetable…" Click="LoadTimetable_Click"/>
                     <MenuItem Header="_Reload timetable" Click="ReloadTimetable_Click"/>
                     <Separator/>
+                    <MenuItem Header="Refresh from _calendar" Click="RefreshFromCalendar_Click"/>
+                    <MenuItem Header="Timetable _source…" Click="TimetableSource_Click"/>
+                    <Separator/>
                     <MenuItem Header="_Today's lessons" Click="TodaysLessons_Click"/>
                     <MenuItem Header="Test _overlay" Click="TestOverlay_Click"/>
                     <Separator/>

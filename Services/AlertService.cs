@@ -102,7 +102,7 @@ internal sealed class AlertService : IDisposable
     /// <summary>Today's lessons, formatted one per line for the tray menu.</summary>
     public string DescribeToday(DateTime now)
     {
-        var lessons = _schedule.LessonsOn(now.DayOfWeek);
+        var lessons = _schedule.LessonsOn(DateOnly.FromDateTime(now));
         if (lessons.Count == 0)
         {
             return "Nothing scheduled today.";
@@ -205,9 +205,11 @@ internal sealed class AlertService : IDisposable
     private void UpdateStatus(DateTime now)
     {
         var next = _schedule.NextAfter(now);
-        var status = next is null
-            ? "No timetable loaded"
-            : $"Next: {next.Lesson.Subject} at {AlertText.Format(next.Lesson.Start)} {DayLabel(now, next.StartsAt)}".TrimEnd();
+        var status = next is not null
+            ? $"Next: {next.Lesson.Subject} at {AlertText.Format(next.Lesson.Start)} {DayLabel(now, next.StartsAt)}".TrimEnd()
+            : _schedule.Timetable.Lessons.Count == 0
+                ? "No timetable loaded"
+                : "No more lessons scheduled";
 
         if (status == _status)
         {

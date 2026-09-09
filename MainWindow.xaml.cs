@@ -22,22 +22,67 @@ internal sealed partial class MainWindow : Window
     private readonly AppSettings _settings = AppSettings.Load();
     private readonly AlertService _alerts = new();
 
+    /// <summary>Why the timetable is not quite right, shown after the next lesson in the tooltip.</summary>
+    private string? _note;
+
     public MainWindow()
     {
         InitializeComponent();
 
-        _alerts.StatusChanged += (_, status) => Dispatcher.BeginInvoke(() => { TrayIcon.ToolTipText = $"Timetable Alert — {status}"; });
+        _alerts.StatusChanged += (_, status) => Dispatcher.BeginInvoke(() => ShowInTooltip(status));
         Closed += (_, _) => _alerts.Dispose();
 
         Loaded += (_, _) => LoadAtStartup();
     }
 
     /// <summary>
-    /// Loads the timetable remembered from last time, falling back to the sample shipped beside
-    /// the executable so the app does something useful the first time it is run. Failures here
-    /// are reported in the tooltip rather than a dialog: this runs at every logon.
+    /// Gets a timetable up as fast as possible. Once a calendar has been set up that means the
+    /// cached week, downloading a fresh one only when the cache has expired; before then it means
+    /// the file remembered from last time. Failures here are reported in the tooltip rather than a
+    /// dialog: this runs at every logon, and nobody wants a message box at boot.
     /// </summary>
-    private void LoadAtStartup()
+    private async void LoadAtStartup()
+    {
+        if (!TimetableSource.IsConfigured)
+        {
+            LoadFileAtStartup();
+            return;
+        }
+
+        var cached = TimetableCache.Load();
+        if (!TimetableCache.IsStale(cached, DateTime.Now))
+        {
+            _alerts.SetTimetable(cached!);
+            return;
+        }
+
+        // Run on the stale copy while the download happens, so a slow or absent network at logon
+        // does not mean no warnings at all for the first lesson of the day.
+        if (cached is not null)
+        {
+            _alerts.SetTimetable(cached);
+        }
+
+        var outcome = await TimetableSource.RefreshAsync(_settings, force: true);
+        Apply(outcome);
+
+        // Only when there is no timetable at all is it worth falling back, and then only to a file
+        // that was actually chosen. Never to the bundled sample: a calendar is set up, so warning
+        // about fictional lessons would be worse than staying quiet. An empty week is not a
+        // failure either — it is a holiday.
+        if (outcome.Timetable is null
+            && !string.IsNullOrWhiteSpace(_settings.TimetablePath)
+            && File.Exists(_settings.TimetablePath))
+        {
+            TryLoad(_settings.TimetablePath, out _);
+        }
+    }
+
+    /// <summary>
+    /// Loads the timetable remembered from last time, falling back to the sample shipped beside
+    /// the executable so the app does something useful the first time it is run.
+    /// </summary>
+    private void LoadFileAtStartup()
     {
         var path = _settings.TimetablePath;
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -45,14 +90,14 @@ internal sealed partial class MainWindow : Window
             path = Path.Combine(AppContext.BaseDirectory, SampleFileName);
             if (!File.Exists(path))
             {
-                TrayIcon.ToolTipText = "Timetable Alert — no timetable loaded";
+                ShowInTooltip("no timetable loaded");
                 return;
             }
         }
 
         if (!TryLoad(path, out _))
         {
-            TrayIcon.ToolTipText = "Timetable Alert — timetable could not be loaded";
+            ShowInTooltip("timetable could not be loaded");
         }
     }
 
@@ -79,6 +124,64 @@ internal sealed partial class MainWindow : Window
             errorSummary = ex.Message;
             return false;
         }
+    }
+
+    /// <summary>Takes a refreshed timetable into use, and remembers anything worth noting about it.</summary>
+    private void Apply(TimetableOutcome outcome)
+    {
+        if (outcome.Timetable is { } timetable && !ReferenceEquals(timetable, _alerts.Timetable))
+        {
+            _alerts.SetTimetable(timetable);
+        }
+
+        _note = outcome.Note;
+        ShowInTooltip(_alerts.Status);
+    }
+
+    private void ShowInTooltip(string status) =>
+        TrayIcon.ToolTipText = _note is null
+            ? $"Timetable Alert — {status}"
+            : $"Timetable Alert — {status}  ({_note})";
+
+    private async void RefreshFromCalendar_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TimetableSource.IsConfigured)
+        {
+            Notify("No calendar has been set up yet. Use \"Timetable source…\" first.", "Nothing to refresh", MessageBoxImage.Information);
+            return;
+        }
+
+        var outcome = await TimetableSource.RefreshAsync(_settings, force: true);
+        Apply(outcome);
+
+        if (outcome.Timetable is not { } timetable)
+        {
+            Notify($"The calendar could not be fetched: {outcome.Note}.", "Refresh failed", MessageBoxImage.Warning);
+            return;
+        }
+
+        var count = timetable.Lessons.Count;
+        var week = timetable.CoversFrom is { } from
+            ? $" for the week of {from.ToString("d MMMM", CultureInfo.CurrentCulture)}"
+            : string.Empty;
+
+        Notify(
+            string.Create(CultureInfo.CurrentCulture, $"Downloaded {count} lesson{(count == 1 ? string.Empty : "s")}{week}.\n\n{_alerts.Status}"),
+            outcome.Note is null ? "Timetable refreshed" : "Timetable not refreshed",
+            outcome.Note is null ? MessageBoxImage.Information : MessageBoxImage.Warning,
+            _alerts.PreviewNextAlert);
+    }
+
+    private void TimetableSource_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new TimetableSourceWindow(_settings) { Owner = this };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        _settings.Save();
+        RefreshFromCalendar_Click(sender, e);
     }
 
     private void LoadTimetable_Click(object sender, RoutedEventArgs e)

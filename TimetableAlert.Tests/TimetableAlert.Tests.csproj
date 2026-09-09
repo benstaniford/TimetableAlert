@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <None Include="..\timetable.sample.json" Link="timetable.sample.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\canvas-week.ics" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

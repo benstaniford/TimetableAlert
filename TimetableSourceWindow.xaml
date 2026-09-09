@@ -1,0 +1,58 @@
+<Window x:Class="TimetableAlert.TimetableSourceWindow"
+        x:ClassModifier="internal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Timetable source"
+        Width="620" SizeToContent="Height"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ShowInTaskbar="True">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,4"
+                   Text="Paste the calendar feed address from the school's Canvas calendar — the &quot;Calendar Feed&quot; button at the bottom right of the calendar page."/>
+        <TextBlock Grid.Row="1" TextWrapping="Wrap" Margin="0,0,0,10" Foreground="#B00020"
+                   Text="Treat this address like a password: anyone who has it can read the calendar."/>
+
+        <Label Grid.Row="2" Content="Calendar _feed address" Target="{Binding ElementName=FeedUrlBox}"/>
+        <TextBox Grid.Row="3" x:Name="FeedUrlBox" Margin="0,0,0,14" Padding="4"/>
+
+        <TextBlock Grid.Row="4" TextWrapping="Wrap" Margin="0,0,0,10"
+                   Text="The feed does not include teacher names. To fill those in, add the parent Canvas login — it is used only when you press &quot;Refresh teacher names&quot;, and is stored in Windows Credential Manager. Leave both boxes empty to skip it."/>
+
+        <Grid Grid.Row="5" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <Label Content="Parent _username" Target="{Binding ElementName=UserNameBox}"/>
+                <TextBox x:Name="UserNameBox" Padding="4"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <Label Content="_Password" Target="{Binding ElementName=PasswordEntry}"/>
+                <PasswordBox x:Name="PasswordEntry" Padding="4"/>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Grid.Row="6" x:Name="StatusText" TextWrapping="Wrap" Margin="0,0,0,12" MinHeight="34"/>
+
+        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="TestButton" Content="_Test" Width="120" Height="28" Margin="0,0,8,0" Click="Test_Click"/>
+            <Button x:Name="TeachersButton" Content="Refresh teacher _names" Width="170" Height="28" Margin="0,0,8,0" Click="RefreshTeachers_Click"/>
+            <Button x:Name="SaveButton" Content="_Save" Width="90" Height="28" Margin="0,0,8,0" IsDefault="True" Click="Save_Click"/>
+            <Button Content="Cancel" Width="90" Height="28" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

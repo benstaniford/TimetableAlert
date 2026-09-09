@@ -40,6 +40,13 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
   validates the JSON into a `Timetable`; `AlertSchedule` turns that into alerts. Every
   `AlertSchedule` method takes "now" as a parameter rather than reading the clock, which is what
   makes the firing rules testable.
+  - `Feed/` — downloading a week from the school's Canvas calendar. `IcsParser` and
+    `SubjectNaming` are pure and unit tested; `TimetableFeed.Build` is separate from
+    `TimetableFeed.FetchAsync` for the same reason, and takes an explicit `TimeZoneInfo` so tests
+    do not move with the clock of whatever runs them. `CanvasClient` is the only thing that logs
+    in, and only teacher names depend on it.
+  - `TimetableFreshness.IsStale` holds the re-download rule; `TimetableWriter` renders a timetable
+    back out in the format `TimetableLoader` reads, which is what makes the cache file work.
 - **TimetableAlert** (`net10.0-windows`, WPF `WinExe`) — `App.xaml` sets
   `ShutdownMode="OnExplicitShutdown"`; `MainWindow.xaml` is a zero-size invisible window hosting
   the `TaskbarIcon` and owning an `AlertService`.
@@ -48,7 +55,13 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
     shows the next lesson's banner on demand however far off it is; `MainWindow` calls it after
     a successful Load or Reload (once the confirmation dialog is dismissed, so the banner is not
     hidden behind it), but deliberately not on the startup auto-load.
-  - `Services/AppSettings` — remembers the timetable path in `%APPDATA%\TimetableAlert\settings.json`.
+  - `Services/AppSettings` — remembers the timetable path and the feed's naming rules in
+    `%APPDATA%\TimetableAlert\settings.json`.
+  - `Services/TimetableSource` — cache-or-download, and the only caller of `CanvasClient`.
+    `Services/TimetableCache` holds the last downloaded week next to the settings.
+  - `Services/CredentialStore` — `advapi32` P/Invoke for Windows Credential Manager. The calendar
+    feed URL lives there as well as the parent login: the URL carries its own token, so it is a
+    password in all but name.
   - `Overlay/` — `OverlayManager` keeps one `OverlayWindow` per monitor and shows them together.
 - **TimetableAlert.Tests** — xUnit over Core.
 - **TimetableAlert.Installer** — WiX v3 MSI: a **per-user** install (`InstallScope="perUser"`)
@@ -69,6 +82,15 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
   - **WFO0003** — because `UseWindowsForms` is on, the WinForms analyzer rejects high-DPI
     settings in `app.manifest`. Do not put a `<dpiAware>`/`<dpiAwareness>` block there; WPF on
     .NET is PerMonitorV2 by default, so it is not needed anyway.
+- **Lessons are either recurring or dated, and both must keep working.** A `Lesson` with a `Date`
+  happens once; one without recurs weekly on its `Day`. `AlertSchedule` keeps two maps and merges
+  them per date. Downloaded weeks are entirely dated, hand-written files entirely recurring — which
+  is why `LessonsOn` has both a `DayOfWeek` and a `DateOnly` overload, and why anything asking
+  about a real day must use the latter or it will find nothing in a downloaded week.
+- **Downloading needs no password.** The `.ics` feed URL is itself the bearer token. Credentials
+  are only ever used to look up teacher names, which the feed does not carry. The feed also beats
+  the REST API on content: the API returns duplicate parent/section copies of some events and
+  misses personal entries.
 - **The alert firing rule is a window, not a threshold crossing** (`AlertSchedule.Evaluate`):
   fire the early warning while the lesson is 60–420 seconds away, the countdown while it is
   0–60 seconds away, each once per lesson per day. This is what makes a machine waking from

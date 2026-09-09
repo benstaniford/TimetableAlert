@@ -1,0 +1,50 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Instructure//Canvas//EN
+BEGIN:VEVENT
+DTSTAMP:20260731T112300Z
+UID:event-calendar-event-664770
+DTSTART:20260907T073000Z
+DTEND:20260907T080000Z
+SUMMARY:Whole School Assembly
+URL;VALUE=URI:https://school.instructure.com/calendar?include_contexts=cour
+ se_3575&month=09&year=2026#calendar_event_664770
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20260731T112300Z
+UID:event-calendar-event-664772
+DTSTART:20260907T113000Z
+DTEND:20260907T120000Z
+SUMMARY:ORIENTATION - Meet Your Head of Year [10PDvApo]
+URL;VALUE=URI:https://school.instructure.com/calendar?include_contexts=cour
+ se_3021&month=09&year=2026#calendar_event_664772
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20260804T142400Z
+UID:event-calendar-event-672666
+DTSTART:20260908T080000Z
+DTEND:20260908T085500Z
+DESCRIPTION:https://school.instructure.com/courses/3078/conferences/4482/jo
+ in\n\n
+SUMMARY:Y10 Maths Higher Core Luna [10MaHLun]
+URL;VALUE=URI:https://school.instructure.com/calendar?include_contexts=cour
+ se_3078&month=09&year=2026#calendar_event_672666
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20260804T142400Z
+UID:event-assignment-991122
+DTSTART;VALUE=DATE:20260909
+DTEND;VALUE=DATE:20260910
+SUMMARY:Biology homework 3
+URL;VALUE=URI:https://school.instructure.com/courses/3517/assignments/991122
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20260731T112300Z
+UID:event-calendar-event-680001
+DTSTART:20260914T120000Z
+DTEND:20260914T125500Z
+SUMMARY:Y10 Wellbeing Apollo [10WbApo]
+URL;VALUE=URI:https://school.instructure.com/calendar?include_contexts=cour
+ se_2795&month=09&year=2026#calendar_event_680001
+END:VEVENT
+END:VCALENDAR
