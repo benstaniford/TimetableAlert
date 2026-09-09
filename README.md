@@ -18,12 +18,18 @@ Everything is on the tray icon's menu:
 
 | Menu item | What it does |
 |---|---|
-| **Load timetable…** | Pick a timetable JSON file. The path is remembered for next time. |
-| **Reload timetable** | Re-read the current file after editing it. |
+| **Load timetable…** | Pick a timetable JSON file. The path is remembered, and the next lesson's banner is previewed. |
+| **Reload timetable** | Re-read the current file after editing it, and preview the next lesson's banner. |
 | **Today's lessons** | List what is on today. |
 | **Test overlay** | Show a sample banner, to check the overlay without waiting for a lesson. |
 | **About** | Version and whose timetable is loaded. |
 | **Exit** | Quit. |
+
+After a successful **Load** or **Reload**, the next lesson's banner is shown for 5 seconds
+however far off that lesson is, so you can see exactly how the warning will look without
+waiting for one. Far-out lessons name the time rather than counting down to it — "starts at
+09:00 on Monday" rather than "starts in 4260 minutes". Starting the app at logon does *not*
+preview, so there is no banner every time the machine boots.
 
 The tray tooltip always shows the next lesson.
 

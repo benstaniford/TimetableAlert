@@ -56,6 +56,24 @@ internal sealed class AlertService : IDisposable
         Tick(DateTime.Now);
     }
 
+    /// <summary>
+    /// Shows the next lesson's banner straight away, however far off it is, so that loading a
+    /// timetable confirms what is coming up and shows exactly how the warning will look. A real
+    /// countdown already on screen wins: it is more urgent than a preview.
+    /// </summary>
+    public void PreviewNextAlert()
+    {
+        var now = DateTime.Now;
+        var next = _schedule.NextAfter(now);
+        if (next is null || _countingDownTo is not null)
+        {
+            return;
+        }
+
+        _overlays.Show(AlertText.Subject(next.Lesson), AlertText.Timing(next.StartsAt, now), AlertText.Detail(next.Lesson));
+        _hideBannerAt = now.AddSeconds(_schedule.Timetable.Alerts.FirstWarningSeconds);
+    }
+
     /// <summary>Shows a sample banner so the overlay can be checked without waiting for a lesson.</summary>
     public void ShowTestBanner()
     {
@@ -70,9 +88,9 @@ internal sealed class AlertService : IDisposable
         else
         {
             _overlays.Show(
-                SubjectLine(next.Lesson.Subject),
-                TimingLine(TimeSpan.FromMinutes(_schedule.Timetable.Alerts.FirstWarningMinutes)),
-                $"TEST  ·  {Detail(next)}");
+                AlertText.Subject(next.Lesson),
+                AlertText.Timing(now.AddMinutes(_schedule.Timetable.Alerts.FirstWarningMinutes), now),
+                $"TEST  ·  {AlertText.Detail(next.Lesson)}");
         }
 
         _countingDownTo = null;
@@ -91,8 +109,8 @@ internal sealed class AlertService : IDisposable
         var lines = lessons.Select(lesson =>
         {
             var when = lesson.End is { } end
-                ? $"{Format(lesson.Start)}–{Format(end)}"
-                : Format(lesson.Start);
+                ? $"{AlertText.Format(lesson.Start)}–{AlertText.Format(end)}"
+                : AlertText.Format(lesson.Start);
             return lesson.Teacher is null ? $"{when}  {lesson.Subject}" : $"{when}  {lesson.Subject} ({lesson.Teacher})";
         });
 
@@ -132,7 +150,7 @@ internal sealed class AlertService : IDisposable
                 return;
             }
 
-            _overlays.UpdateText(SubjectLine(lesson.Lesson.Subject), TimingLine(remaining), Detail(lesson));
+            _overlays.UpdateText(AlertText.Subject(lesson.Lesson), AlertText.Timing(lesson.StartsAt, now), AlertText.Detail(lesson.Lesson));
             return;
         }
 
@@ -154,8 +172,7 @@ internal sealed class AlertService : IDisposable
         _fired.Add(decision.Key);
 
         var occurrence = decision.Occurrence;
-        var remaining = occurrence.StartsAt - now;
-        _overlays.Show(SubjectLine(occurrence.Lesson.Subject), TimingLine(remaining), Detail(occurrence));
+        _overlays.Show(AlertText.Subject(occurrence.Lesson), AlertText.Timing(occurrence.StartsAt, now), AlertText.Detail(occurrence.Lesson));
 
         if (decision.Phase == AlertPhase.Imminent)
         {
@@ -175,7 +192,7 @@ internal sealed class AlertService : IDisposable
         var next = _schedule.NextAfter(now);
         var status = next is null
             ? "No timetable loaded"
-            : $"Next: {next.Lesson.Subject} at {Format(next.Lesson.Start)} {DayLabel(now, next.StartsAt)}".TrimEnd();
+            : $"Next: {next.Lesson.Subject} at {AlertText.Format(next.Lesson.Start)} {DayLabel(now, next.StartsAt)}".TrimEnd();
 
         if (status == _status)
         {
@@ -193,32 +210,4 @@ internal sealed class AlertService : IDisposable
         _ => startsAt.ToString("dddd", CultureInfo.CurrentCulture),
     };
 
-    private static string SubjectLine(string subject) => $"⏰ {subject.ToUpper(CultureInfo.CurrentCulture)}";
-
-    private static string TimingLine(TimeSpan remaining)
-    {
-        if (remaining <= TimeSpan.Zero)
-        {
-            return "is starting now";
-        }
-
-        // Under two minutes, count in whole seconds; above that, whole minutes.
-        if (remaining < TimeSpan.FromMinutes(2))
-        {
-            var seconds = (int)Math.Ceiling(remaining.TotalSeconds);
-            return $"starts in {seconds} second{(seconds == 1 ? string.Empty : "s")}";
-        }
-
-        var minutes = (int)Math.Ceiling(remaining.TotalMinutes);
-        return $"starts in {minutes} minute{(minutes == 1 ? string.Empty : "s")}";
-    }
-
-    private static string Detail(LessonOccurrence occurrence)
-    {
-        var lesson = occurrence.Lesson;
-        var when = lesson.End is { } end ? $"{Format(lesson.Start)}–{Format(end)}" : Format(lesson.Start);
-        return lesson.Teacher is null ? when : $"{when}  ·  {lesson.Teacher}";
-    }
-
-    private static string Format(TimeOnly time) => time.ToString("HH:mm", CultureInfo.InvariantCulture);
 }

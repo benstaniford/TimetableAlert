@@ -102,7 +102,8 @@ internal sealed partial class MainWindow : Window
             Notify(
                 string.Create(CultureInfo.CurrentCulture, $"Loaded {count} lesson{(count == 1 ? string.Empty : "s")}.\n\n{_alerts.Status}"),
                 "Timetable loaded",
-                MessageBoxImage.Information);
+                MessageBoxImage.Information,
+                _alerts.PreviewNextAlert);
         }
         else
         {
@@ -121,7 +122,7 @@ internal sealed partial class MainWindow : Window
 
         if (TryLoad(path, out var errorSummary))
         {
-            Notify($"Reloaded {Path.GetFileName(path)}.\n\n{_alerts.Status}", "Timetable reloaded", MessageBoxImage.Information);
+            Notify($"Reloaded {Path.GetFileName(path)}.\n\n{_alerts.Status}", "Timetable reloaded", MessageBoxImage.Information, _alerts.PreviewNextAlert);
         }
         else
         {
@@ -165,6 +166,10 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    private void Notify(string message, string caption, MessageBoxImage image) =>
-        Dispatcher.BeginInvoke(() => MessageBox.Show(message, caption, MessageBoxButton.OK, image));
+    private void Notify(string message, string caption, MessageBoxImage image, Action? afterDismissed = null) =>
+        Dispatcher.BeginInvoke(() =>
+        {
+            MessageBox.Show(message, caption, MessageBoxButton.OK, image);
+            afterDismissed?.Invoke();
+        });
 }

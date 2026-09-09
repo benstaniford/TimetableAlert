@@ -44,7 +44,10 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
   `ShutdownMode="OnExplicitShutdown"`; `MainWindow.xaml` is a zero-size invisible window hosting
   the `TaskbarIcon` and owning an `AlertService`.
   - `Services/AlertService` — a one-second `DispatcherTimer` that asks `AlertSchedule` what is
-    due, drives the banner, and updates the countdown and tray tooltip.
+    due, drives the banner, and updates the countdown and tray tooltip. `PreviewNextAlert`
+    shows the next lesson's banner on demand however far off it is; `MainWindow` calls it after
+    a successful Load or Reload (once the confirmation dialog is dismissed, so the banner is not
+    hidden behind it), but deliberately not on the startup auto-load.
   - `Services/AppSettings` — remembers the timetable path in `%APPDATA%\TimetableAlert\settings.json`.
   - `Overlay/` — `OverlayManager` keeps one `OverlayWindow` per monitor and shows them together.
 - **TimetableAlert.Tests** — xUnit over Core.
