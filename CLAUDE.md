@@ -57,6 +57,12 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
   nullable enabled. Consequently P/Invoke uses source-generated `[LibraryImport]` in
   `Overlay/NativeMethods.cs`, and JSON goes through source-generated `JsonSerializerContext`s
   rather than reflection. The test project deliberately relaxes to `latest-Recommended`.
+  Two rules bite specifically here, and both are build **errors**:
+  - **CA5392** — every P/Invoke needs `[DefaultDllImportSearchPaths(DllImportSearchPath.System32)]`.
+    Add it alongside any new `[LibraryImport]`.
+  - **WFO0003** — because `UseWindowsForms` is on, the WinForms analyzer rejects high-DPI
+    settings in `app.manifest`. Do not put a `<dpiAware>`/`<dpiAwareness>` block there; WPF on
+    .NET is PerMonitorV2 by default, so it is not needed anyway.
 - **The alert firing rule is a window, not a threshold crossing** (`AlertSchedule.Evaluate`):
   fire the early warning while the lesson is 60–420 seconds away, the countdown while it is
   0–60 seconds away, each once per lesson per day. This is what makes a machine waking from

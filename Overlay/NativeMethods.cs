@@ -20,16 +20,20 @@ internal static partial class NativeMethods
 
     internal static readonly IntPtr HwndTopmost = new(-1);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
     internal static partial int GetWindowLong(IntPtr hWnd, int nIndex);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
     internal static partial int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
