@@ -134,10 +134,15 @@ jobs:
 
           ## Installation
           1. Download the MSI installer
-          2. Run the installer
-          3. The application will be installed to Program Files and started with Windows
+          2. Run the installer - it installs for the current user only, so there is no
+             administrator prompt
+          3. The application will be installed to ``%LOCALAPPDATA%\Programs\TimetableAlert`` and
+             started with Windows
           4. Desktop and Start Menu shortcuts will be created
-          5. Use the tray icon's **Load timetable...** to point it at your own timetable JSON
+          5. If you have v0.1.3 or earlier installed, uninstall it first: those versions
+             installed to Program Files for all users, and a per-user installer cannot
+             remove them
+          6. Use the tray icon's **Load timetable...** to point it at your own timetable JSON
 
           ## System Requirements
           - **OS**: Windows 10 or later (64-bit)

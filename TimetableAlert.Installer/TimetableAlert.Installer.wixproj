@@ -8,6 +8,12 @@
     <SchemaVersion>2.0</SchemaVersion>
     <OutputName>TimetableAlertSetup</OutputName>
     <OutputType>Package</OutputType>
+    <!-- This is a per-user package: it installs under %LOCALAPPDATA% so that it never needs
+         elevation. The validation suite assumes a per-machine package, so it objects to
+         components whose key path is a file in the user profile (ICE38), to profile
+         directories (ICE64) and to a "Program Files"-shaped layout outside Program Files
+         (ICE91). All three are expected here. -->
+    <SuppressIces>ICE38;ICE64;ICE91</SuppressIces>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
     <OutputPath>bin\$(Platform)\$(Configuration)\</OutputPath>

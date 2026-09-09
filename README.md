@@ -36,6 +36,13 @@ The tray tooltip always shows the next lesson.
 On first run, if no timetable has been chosen yet, the app loads `timetable.sample.json` from
 its own folder. The installer registers the app to start with Windows.
 
+## Installing
+
+The MSI on the [releases page](../../releases) installs for the current user only, into
+`%LOCALAPPDATA%\Programs\TimetableAlert`, so it never asks for administrator rights. If you
+have v0.1.3 or earlier installed — those went into Program Files for all users — uninstall it
+before installing this one; a per-user installer has no way to remove a per-machine one.
+
 ## Timetable format
 
 ```json

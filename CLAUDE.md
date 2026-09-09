@@ -51,8 +51,11 @@ full MSBuild build the installer. The solution is for Visual Studio, which handl
   - `Services/AppSettings` — remembers the timetable path in `%APPDATA%\TimetableAlert\settings.json`.
   - `Overlay/` — `OverlayManager` keeps one `OverlayWindow` per monitor and shows them together.
 - **TimetableAlert.Tests** — xUnit over Core.
-- **TimetableAlert.Installer** — WiX v3 MSI: Program Files, Start Menu/Desktop shortcuts,
-  auto-start via `HKCU\...\Run`, and the sample timetable alongside the exe.
+- **TimetableAlert.Installer** — WiX v3 MSI: a **per-user** install (`InstallScope="perUser"`)
+  into `%LOCALAPPDATA%\Programs\TimetableAlert` so it never triggers UAC, plus Start
+  Menu/Desktop shortcuts, auto-start via `HKCU\...\Run`, and the sample timetable alongside
+  the exe. Installing into the profile means ICE38/ICE64/ICE91 fire on every component; they
+  are suppressed in the `.wixproj`, which is where to look if validation starts complaining.
 
 ## Things worth knowing before changing this code
 

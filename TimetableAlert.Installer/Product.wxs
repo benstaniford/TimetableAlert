@@ -12,9 +12,9 @@
            Manufacturer="$(var.Manufacturer)"
            UpgradeCode="$(var.UpgradeCode)">
 
-    <Package InstallerVersion="200"
+    <Package InstallerVersion="500"
              Compressed="yes"
-             InstallScope="perMachine"
+             InstallScope="perUser"
              Description="$(var.ProductName) Installer"
              Comments="On-screen reminders before each lesson starts" />
 
@@ -23,9 +23,11 @@
 
     <!-- Installation directory structure -->
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFiles64Folder">
-        <Directory Id="INSTALLFOLDER" Name="TimetableAlert">
-          <Directory Id="IconsFolder" Name="icons" />
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="ProgramsFolder" Name="Programs">
+          <Directory Id="INSTALLFOLDER" Name="TimetableAlert">
+            <Directory Id="IconsFolder" Name="icons" />
+          </Directory>
         </Directory>
       </Directory>
 
@@ -49,6 +51,7 @@
               Source="$(var.TimetableAlert.TargetDir)TimetableAlert.runtimeconfig.json" />
         <File Id="TimetableAlertDepsJsonFile"
               Source="$(var.TimetableAlert.TargetDir)TimetableAlert.deps.json" />
+        <RemoveFolder Id="CleanUpInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
       </Component>
 
       <!-- Timetable parsing and scheduling logic -->
@@ -85,6 +88,7 @@
         <File Id="AppIco"
               Source="$(var.TimetableAlert.TargetDir)icons\app.ico"
               KeyPath="yes" />
+        <RemoveFolder Id="CleanUpIconsFolder" Directory="IconsFolder" On="uninstall" />
       </Component>
     </DirectoryRef>
 
@@ -114,7 +118,6 @@
                   Description="On-screen reminders before each lesson starts"
                   Target="[INSTALLFOLDER]TimetableAlert.exe"
                   WorkingDirectory="INSTALLFOLDER"/>
-        <RemoveFolder Id="CleanUpDesktopShortcut" Directory="DesktopFolder" On="uninstall"/>
         <RegistryValue Root="HKCU"
                        Key="Software\TimetableAlert"
                        Name="desktopShortcut"
