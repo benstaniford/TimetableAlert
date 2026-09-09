@@ -70,8 +70,8 @@ before installing this one; a per-user installer has no way to remove a per-mach
 The whole file is validated on load, and anything wrong is reported naming the entry
 (`lessons[4]: 'Frugday' is not a day of the week.`) rather than being silently dropped.
 
-`timetable.sample.json` in this repository is a complete week transcribed from a real schedule,
-and is a good starting point to edit.
+`timetable.sample.json` in this repository is a made-up week — the student and teachers are
+fictional — laid out like a real one, and is a good starting point to edit.
 
 ## Building
 
